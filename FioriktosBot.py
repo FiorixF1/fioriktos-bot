@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 """ Costanti """
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+BOT_TOKEN = environ.get("BOT_TOKEN")
 HEROKU_APP_NAME = "fioriktos"
 PORT = int(environ.get("PORT", "8443"))
 
