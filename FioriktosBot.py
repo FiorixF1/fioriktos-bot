@@ -1,5 +1,6 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from functools import wraps
+from os import environ
 import logging
 import random
 import json
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 """ Costanti """
-BOT_TOKEN = environ.get("BOT_TOKEN")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 HEROKU_APP_NAME = "fioriktos"
 PORT = int(environ.get("PORT", "8443"))
 
