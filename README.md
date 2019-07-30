@@ -9,3 +9,5 @@ This is a Telegram bot which uses Markov chains to learn how to speak given the 
 ```
 
 There are two more commands that can be issued only by the administrator of the bot, which are ```debug``` and ```serialize```. The first one prints the internal state of the bot on the terminal of the machine running the bot, it is clearly used for debugging purposes. The second one serializes the bot state into a file sent to the administrator. This makes possible for the administrator to shutdown the bot without loosing the learnt models or to transfer them in other groups without starting from an empty model.
+
+The bot is deployed on Heroku, which erases the local file system every 24 hours. For this reason the code is a bit tricky, it uses a local connection to a Postgre database in order to store the learnt models.

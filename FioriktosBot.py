@@ -1,6 +1,7 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from functools import wraps
 from os import environ
+import psycopg2
 import logging
 import random
 import json
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 """ Costanti """
 BOT_TOKEN = environ.get("BOT_TOKEN")
+DATABASE_URL = environ['DATABASE_URL']
 HEROKU_APP_NAME = "fioriktos"
 PORT = int(environ.get("PORT", "8443"))
 
@@ -30,7 +32,8 @@ FIORIXF1 = 289439604
 ADMINS = [FIORIXF1]
 ADMINS_USERNAME = { FIORIXF1: "FiorixF1",
                   }
-CHATS = dict()      # chiave = chat_id --- valore = chat (oggetto)
+CHATS = dict()      # key = chat_id --- value = object Chat
+REQUEST_COUNTER = 0 # for automatic serialization on database
 
 
 
@@ -57,31 +60,31 @@ class Chat:
                 if token not in self.model:
                     self.model[token] = list()
 
-                if len(self.model[token]) < 100:
+                if len(self.model[token]) < 200:
                     self.model[token].append(successor)
                 else:
-                    guess = random.randint(0, 99)
+                    guess = random.randint(0, 199)
                     self.model[token][guess] = successor
 
                 if type(token) == type("A") and token[-1] in PUNCTUATION_MARKS:
-                    if len(self.model[token]) < 100:
+                    if len(self.model[token]) < 200:
                         self.model[token].append(END)
                     else:
-                        guess = random.randint(0, 99)
+                        guess = random.randint(0, 199)
                         self.model[token][guess] = END
 
     def learn_sticker(self, sticker):
-        if len(self.stickers) < 100:
+        if len(self.stickers) < 500:
             self.stickers.append(sticker)
         else:
-            guess = random.randint(0, 99)
+            guess = random.randint(0, 499)
             self.stickers[guess] = sticker
 
     def learn_animation(self, animation):
-        if len(self.animations) < 100:
+        if len(self.animations) < 500:
             self.animations.append(animation)
         else:
-            guess = random.randint(0, 99)
+            guess = random.randint(0, 499)
             self.animations[guess] = animation
 
     def reply(self):
@@ -151,14 +154,48 @@ def chat_finder(f):
         f(bot, update, chat, *args, **kwargs)
     return wrapped
 
+def serializer(f):
+    global REQUEST_COUNTER
+    
+    @wraps(f)
+    def wrapped(bot, update, *args, **kwargs):
+        f(bot, update, *args, **kwargs)
+        
+        REQUEST_COUNTER += 1
+        if REQUEST_COUNTER % 100 == 0:
+            data = jsonify()
+            
+            # delete everything
+            connection = psycopg2.connect(DATABASE_URL, sslmode='require')
+            cursor = connection.cursor()
+            cursor.execute("DELETE FROM fioriktos;")
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            # add newer data
+            data = [data[i:i+65536] for i in range(0, len(data), 65536)]
+            
+            connection = psycopg2.connect(DATABASE_URL, sslmode='require')
+            cursor = connection.cursor()
+            for i in len(data):
+                cursor.execute("INSERT INTO fioriktos VALUES (%d, %s)", (i, data[i]))
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+    return wrapped
+
 
 
 """ Comandi """
+@serializer
 @chat_finder
 def fioriktos(bot, update, chat):
     reply = chat.talk()
     bot.send_message(chat_id=update.message.chat_id, text=reply)
 
+@serializer
 @chat_finder
 def torrent(bot, update, chat, args):
     try:
@@ -171,11 +208,13 @@ def torrent(bot, update, chat, args):
     except:
         bot.send_message(chat_id=update.message.chat_id, text="Send /torrent with a number between 0 and 10.")
 
+@serializer
 @chat_finder
 def enable_learning(bot, update, chat):
     chat.enable_learning()
     bot.send_message(chat_id=update.message.chat_id, text="Learning enabled")
-    
+
+@serializer    
 @chat_finder
 def disable_learning(bot, update, chat):
     chat.disable_learning()
@@ -185,16 +224,19 @@ def disable_learning(bot, update, chat):
 def debug(bot, update, chat):
     print(chat)
 
+@serializer
 @chat_finder
 def learn_text_and_reply(bot, update, chat):
     chat.learn_text(update.message.text)
     reply(bot, update, chat)
 
+@serializer
 @chat_finder
 def learn_sticker_and_reply(bot, update, chat):
     chat.learn_sticker(update.message.sticker.file_id)
     reply(bot, update, chat)
 
+@serializer
 @chat_finder
 def learn_animation_and_reply(bot, update, chat):
     chat.learn_animation(update.message.animation.file_id)
@@ -214,15 +256,15 @@ def reply(bot, update, chat):
         elif type_of_response == ANIMATION:
             bot.send_animation(chat_id=update.message.chat_id, animation=content)
 
+# by file
 def serialize(bot, update):
     if update.effective_user.id in ADMINS:
-        jsonification = dict()
-        for chat_id in CHATS:
-            jsonification[chat_id] = str(CHATS[chat_id])
+        data = jsonify()
         with open("dump.txt", "w") as dump:
-            dump.write(json.dumps(jsonification, indent=4))
+            dump.write(data)
         bot.send_document(chat_id=update.message.chat_id, document=open("dump.txt", 'rb'))
 
+# by file
 def deserialize(bot, update):
     if update.effective_user.id in ADMINS and update.message.document.mime_type == "text/plain":
         try:
@@ -230,26 +272,36 @@ def deserialize(bot, update):
             bot.get_file(file_id).download('dump.txt')
 
             with open("dump.txt", "r") as dump:
-                content = dump.read()
-            chats_tmp = json.loads(content)
-
-            for chat_id in chats_tmp:
-                jsonized_chat = json.loads(chats_tmp[chat_id])
-
-                deserialized_chat = Chat()
-                deserialized_chat.torrent_level = jsonized_chat["torrent_level"]
-                deserialized_chat.is_learning = jsonized_chat["is_learning"]
-                deserialized_chat.model = jsonized_chat["model"]
-                deserialized_chat.stickers = jsonized_chat["stickers"]
-                deserialized_chat.animations = jsonized_chat["animations"]
-
-                CHATS[int(chat_id)] = deserialized_chat
+                data = dump.read()
+            unjsonify(data)
 
             bot.send_message(chat_id=update.message.chat_id, text="ACK")
         except Exception as e:
             bot.send_message(chat_id=update.message.chat_id, text="NAK")
             print(e)
 
+def jsonify():
+    jsonification = dict()
+    for chat_id in CHATS:
+        jsonification[chat_id] = str(CHATS[chat_id])
+    data = json.dumps(jsonification, indent=4)
+    return data
+
+def unjsonify(data):
+    chats_tmp = json.loads(data)
+
+    for chat_id in chats_tmp:
+        jsonized_chat = json.loads(chats_tmp[chat_id])
+
+        deserialized_chat = Chat()
+        deserialized_chat.torrent_level = jsonized_chat["torrent_level"]
+        deserialized_chat.is_learning = jsonized_chat["is_learning"]
+        deserialized_chat.model = jsonized_chat["model"]
+        deserialized_chat.stickers = jsonized_chat["stickers"]
+        deserialized_chat.animations = jsonized_chat["animations"]
+
+        CHATS[int(chat_id)] = deserialized_cha
+    
 def error(bot, update, error):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, error)
@@ -258,6 +310,31 @@ def error(bot, update, error):
 
 def main():
     """Start the bot"""
+    
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  #
+    # Database connection (needed for deploying the app on Heroku)
+    #
+    # heroku pg:psql postgresql-solid-47100 --app fioriktos
+    #
+    # create table fioriktos (
+    #     id serial primary key,
+    #     json varchar(65536) not null
+    # );
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  #
+    connection = psycopg2.connect(DATABASE_URL, sslmode='require')
+
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM fioriktos ORDER BY id ASC;")
+    records = cursor.fetchall()
+    
+    stored_data = ''.join( [row[1] for row in records] )
+    if stored_data != '':
+        unjsonify(stored_data)
+
+    cursor.close()
+    connection.close()
+
+
 
     # Create the EventHandler and pass it your bot's token
     updater = Updater(BOT_TOKEN)
