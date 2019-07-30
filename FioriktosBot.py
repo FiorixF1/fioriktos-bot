@@ -178,7 +178,7 @@ def serializer(f):
             
             connection = psycopg2.connect(DATABASE_URL, sslmode='require')
             cursor = connection.cursor()
-            for i in len(data):
+            for i in range(len(data)):
                 cursor.execute("INSERT INTO fioriktos VALUES (%d, %s)", (i, data[i]))
             connection.commit()
             cursor.close()
