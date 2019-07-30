@@ -300,7 +300,7 @@ def unjsonify(data):
         deserialized_chat.stickers = jsonized_chat["stickers"]
         deserialized_chat.animations = jsonized_chat["animations"]
 
-        CHATS[int(chat_id)] = deserialized_cha
+        CHATS[int(chat_id)] = deserialized_chat
     
 def error(bot, update, error):
     """Log Errors caused by Updates."""
