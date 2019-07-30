@@ -74,18 +74,20 @@ class Chat:
                         self.model[token][guess] = END
 
     def learn_sticker(self, sticker):
-        if len(self.stickers) < 500:
-            self.stickers.append(sticker)
-        else:
-            guess = random.randint(0, 499)
-            self.stickers[guess] = sticker
+        if self.is_learning:
+            if len(self.stickers) < 500:
+                self.stickers.append(sticker)
+            else:
+                guess = random.randint(0, 499)
+                self.stickers[guess] = sticker
 
     def learn_animation(self, animation):
-        if len(self.animations) < 500:
-            self.animations.append(animation)
-        else:
-            guess = random.randint(0, 499)
-            self.animations[guess] = animation
+        if self.is_learning:
+            if len(self.animations) < 500:
+                self.animations.append(animation)
+            else:
+                guess = random.randint(0, 499)
+                self.animations[guess] = animation
 
     def reply(self):
         if random.random()*10 < self.torrent_level:
@@ -94,9 +96,9 @@ class Chat:
             else:
                 type_of_reply = random.choice([STICKER, ANIMATION])
                 if type_of_reply == STICKER:
-                    return (STICKER, random.choice(self.stickers))
+                    return (STICKER, self.choose_sticker())
                 elif type_of_reply == ANIMATION:
-                    return (ANIMATION, random.choice(self.animations))
+                    return (ANIMATION, self.choose_animation())
         return ""
 
     def talk(self):
@@ -109,6 +111,18 @@ class Chat:
             answer.append(new_token)
             walker = new_token
         return ' '.join(answer)
+
+    def choose_sticker(self):
+        try:
+            return random.choice(self.stickers)
+        except:
+            return ""
+
+    def choose_animation(self):
+        try:
+            return random.choice(self.animations)
+        except:
+            return ""
 
     def set_torrent(self, new_level):
         if new_level >= 0 and new_level <= 10:
@@ -197,6 +211,24 @@ def fioriktos(bot, update, chat):
 
 @serializer
 @chat_finder
+def choose_sticker(bot, update, chat):
+    reply = chat.choose_sticker()
+    if reply != "":
+        bot.send_sticker(chat_id=update.message.chat_id, sticker=reply)
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text="NAK")
+
+@serializer
+@chat_finder
+def choose_animation(bot, update, chat):
+    reply = chat.choose_animation()
+    if reply != "":
+        bot.send_animation(chat_id=update.message.chat_id, animation=reply)
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text="NAK")
+
+@serializer
+@chat_finder
 def torrent(bot, update, chat, args):
     try:
         quantity = int(args[0])
@@ -219,10 +251,6 @@ def enable_learning(bot, update, chat):
 def disable_learning(bot, update, chat):
     chat.disable_learning()
     bot.send_message(chat_id=update.message.chat_id, text="Learning disabled")
-
-@chat_finder
-def debug(bot, update, chat):
-    print(chat)
 
 @serializer
 @chat_finder
@@ -248,13 +276,14 @@ def reply(bot, update, chat):
     if len(response) == 2:
         type_of_response = response[0]
         content = response[1]
-
-        if type_of_response == MESSAGE and content != "":
-            bot.send_message(chat_id=update.message.chat_id, text=content)
-        elif type_of_response == STICKER:
-            bot.send_sticker(chat_id=update.message.chat_id, sticker=content)
-        elif type_of_response == ANIMATION:
-            bot.send_animation(chat_id=update.message.chat_id, animation=content)
+        
+        if content != "":
+            if type_of_response == MESSAGE:
+                bot.send_message(chat_id=update.message.chat_id, text=content)
+            elif type_of_response == STICKER:
+                bot.send_sticker(chat_id=update.message.chat_id, sticker=content)
+            elif type_of_response == ANIMATION:
+                bot.send_animation(chat_id=update.message.chat_id, animation=content)
 
 # by file
 def serialize(bot, update):
@@ -312,14 +341,14 @@ def main():
     """Start the bot"""
     
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  #
-    # Database connection (needed for deploying the app on Heroku)
-    #
-    # heroku pg:psql postgresql-solid-47100 --app fioriktos
-    #
-    # create table fioriktos (
-    #     id serial primary key,
-    #     json varchar(65536) not null
-    # );
+    # Database connection (needed for deploying the app on Heroku)       #
+    #                                                                    #
+    # heroku pg:psql postgresql-solid-47100 --app fioriktos              #
+    #                                                                    #
+    # create table fioriktos (                                           #
+    #     id serial primary key,                                         #
+    #     json varchar(65536) not null                                   #
+    # );                                                                 #
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  #
     connection = psycopg2.connect(DATABASE_URL, sslmode='require')
 
@@ -344,11 +373,12 @@ def main():
 
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("fioriktos", fioriktos))
+    dp.add_handler(CommandHandler("sticker", choose_sticker))
+    dp.add_handler(CommandHandler("gif", choose_animation))
     dp.add_handler(CommandHandler("torrent", torrent, pass_args=True))
     dp.add_handler(CommandHandler("enablelearning", enable_learning))
     dp.add_handler(CommandHandler("disablelearning", disable_learning))
     dp.add_handler(CommandHandler("serialize", serialize))
-    dp.add_handler(CommandHandler("debug", debug))
 
     # on noncommand i.e message
     dp.add_handler(MessageHandler(Filters.text, learn_text_and_reply))
