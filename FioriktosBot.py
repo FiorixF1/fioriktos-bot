@@ -155,10 +155,10 @@ def chat_finder(f):
     return wrapped
 
 def serializer(f):
-    global REQUEST_COUNTER
-    
     @wraps(f)
     def wrapped(bot, update, *args, **kwargs):
+        global REQUEST_COUNTER
+    
         f(bot, update, *args, **kwargs)
         
         REQUEST_COUNTER += 1
