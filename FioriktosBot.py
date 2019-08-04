@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 """ Costanti """
 BOT_TOKEN = environ.get("BOT_TOKEN")
-DATABASE_URL = environ['DATABASE_URL']
+DATABASE_URL = environ.get('DATABASE_URL')
 HEROKU_APP_NAME = "fioriktos"
 PORT = int(environ.get("PORT", "8443"))
 
@@ -140,7 +140,7 @@ class Chat:
                          "model": self.model,
                          "stickers": self.stickers,
                          "animations": self.animations}
-        return json.dumps(jsonification, indent=4)
+        return json.dumps(jsonification, indent=2)
 
 
 
@@ -177,26 +177,7 @@ def serializer(f):
         
         REQUEST_COUNTER += 1
         if REQUEST_COUNTER % 100 == 0:
-            data = jsonify()
-            
-            # delete everything
-            connection = psycopg2.connect(DATABASE_URL, sslmode='require')
-            cursor = connection.cursor()
-            cursor.execute("DELETE FROM fioriktos;")
-            connection.commit()
-            cursor.close()
-            connection.close()
-            
-            # add newer data
-            data = [data[i:i+65536] for i in range(0, len(data), 65536)]
-            
-            connection = psycopg2.connect(DATABASE_URL, sslmode='require')
-            cursor = connection.cursor()
-            for i in range(len(data)):
-                cursor.execute("INSERT INTO fioriktos VALUES (%s, %s)", (i, data[i]))
-            connection.commit()
-            cursor.close()
-            connection.close()
+            sync_db()
             
     return wrapped
 
@@ -303,6 +284,7 @@ def deserialize(bot, update):
             with open("dump.txt", "r") as dump:
                 data = dump.read()
             unjsonify(data)
+            sync_db()
 
             bot.send_message(chat_id=update.message.chat_id, text="ACK")
         except Exception as e:
@@ -313,7 +295,7 @@ def jsonify():
     jsonification = dict()
     for chat_id in CHATS:
         jsonification[chat_id] = str(CHATS[chat_id])
-    data = json.dumps(jsonification, indent=4)
+    data = json.dumps(jsonification, indent=2)
     return data
 
 def unjsonify(data):
@@ -330,7 +312,29 @@ def unjsonify(data):
         deserialized_chat.animations = jsonized_chat["animations"]
 
         CHATS[int(chat_id)] = deserialized_chat
-    
+
+def sync_db():
+    data = jsonify()
+            
+    # delete everything
+    connection = psycopg2.connect(DATABASE_URL, sslmode='require')
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM fioriktos;")
+    connection.commit()
+    cursor.close()
+    connection.close()
+            
+    # add newer data
+    data = [data[i:i+65536] for i in range(0, len(data), 65536)]
+            
+    connection = psycopg2.connect(DATABASE_URL, sslmode='require')
+    cursor = connection.cursor()
+    for i in range(len(data)):
+        cursor.execute("INSERT INTO fioriktos VALUES (%s, %s)", (i, data[i]))
+    connection.commit()
+    cursor.close()
+    connection.close()
+
 def error(bot, update, error):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, error)
