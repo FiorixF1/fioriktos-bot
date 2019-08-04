@@ -184,6 +184,9 @@ def serializer(f):
 
 
 """ Comandi """
+def start(bot, update):
+    bot.send_message(chat_id=update.message.chat_id, text="SYN")
+    
 @serializer
 @chat_finder
 def fioriktos(bot, update, chat):
@@ -376,6 +379,7 @@ def main():
     dp = updater.dispatcher
 
     # on different commands - answer in Telegram
+    dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("fioriktos", fioriktos))
     dp.add_handler(CommandHandler("sticker", choose_sticker))
     dp.add_handler(CommandHandler("gif", choose_animation))
