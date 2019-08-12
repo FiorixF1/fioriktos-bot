@@ -48,11 +48,13 @@ class Chat:
 
     def learn_text(self, text):
         if self.is_learning:
-            # pre-processing
+            # pre-processing and filtering
             text = text.replace('\n', '. ')
+            tokens = text.lower().split()
+            tokens = list(filter(lambda x: "http" not in x, tokens))
+            tokens.append(END)            
 
             # actual learning
-            tokens = text.lower().split() + [END]
             for i in range(len(tokens)-1):
                 token = tokens[i]
                 successor = tokens[i+1]
