@@ -116,7 +116,7 @@ class Chat:
         answer = [walker]
         while True:
             filtered_walker = ''.join(filter(lambda ch: ch.isalnum(), walker))
-            if filtered_token != token and len(filtered_token) > 0:
+            if filtered_walker != token and len(filtered_walker) > 0:
                 walker = filtered_walker
             new_token = random.choice(self.model[walker])
             if new_token == END:
