@@ -153,7 +153,7 @@ class Chat:
             if ch.isalnum():
                 filtered_word += ch
         return filtered_word
-    )
+
     def __str__(self):
         jsonification = {"torrent_level": self.torrent_level,
                          "is_learning": self.is_learning,
