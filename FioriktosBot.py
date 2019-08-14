@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 """ Costanti """
 BOT_TOKEN = environ.get("BOT_TOKEN")
-DATABASE_URL = environ.get('DATABASE_URL')
+DATABASE_URL = environ.get("DATABASE_URL")
 HEROKU_APP_NAME = "fioriktos"
 PORT = int(environ.get("PORT", "8443"))
 
@@ -61,7 +61,7 @@ class Chat:
                 
                 # use the token without special characters only when it is not an empty string
                 filtered_token = ''.join(filter(lambda ch: ch.isalnum(), token))
-                if len(filtered_token) > 0:
+                if filtered_token != token and len(filtered_token) > 0:
                     self.model[token] = list()
                     token = filtered_token
 
@@ -116,7 +116,7 @@ class Chat:
         answer = [walker]
         while True:
             filtered_walker = ''.join(filter(lambda ch: ch.isalnum(), walker))
-            if len(filtered_walker) > 0:
+            if filtered_token != token and len(filtered_token) > 0:
                 walker = filtered_walker
             new_token = random.choice(self.model[walker])
             if new_token == END:
@@ -146,13 +146,6 @@ class Chat:
 
     def disable_learning(self):
         self.is_learning = False
-
-    def filter_word(self, word):
-        filtered_word = ""
-        for ch in word:
-            if ch.isalnum():
-                filtered_word += ch
-        return filtered_word
 
     def __str__(self):
         jsonification = {"torrent_level": self.torrent_level,
