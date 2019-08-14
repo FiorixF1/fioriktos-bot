@@ -20,7 +20,7 @@ HEROKU_APP_NAME = "fioriktos"
 PORT = int(environ.get("PORT", "8443"))
 
 END = 0
-PUNCTUATION_MARKS = ".!?\n"
+ENDING_PUNCTUATION_MARKS = ".!?\n"
 MESSAGE = "Message"
 STICKER = "Sticker"
 ANIMATION = "Animation"
@@ -58,6 +58,12 @@ class Chat:
             for i in range(len(tokens)-1):
                 token = tokens[i]
                 successor = tokens[i+1]
+                
+                # use the token without special characters only when it is not an empty string
+                filtered_token = ''.join(filter(lambda ch: ch.isalnum(), token))
+                if len(filtered_token) > 0:
+                    self.model[token] = list()
+                    token = filtered_token
 
                 if token not in self.model:
                     self.model[token] = list()
@@ -68,7 +74,7 @@ class Chat:
                     guess = random.randint(0, 199)
                     self.model[token][guess] = successor
 
-                if type(token) == type("A") and token[-1] in PUNCTUATION_MARKS:
+                if type(token) == type("A") and token[-1] in ENDING_PUNCTUATION_MARKS:
                     if len(self.model[token]) < 200:
                         self.model[token].append(END)
                     else:
@@ -90,6 +96,8 @@ class Chat:
             else:
                 guess = random.randint(0, 499)
                 self.animations[guess] = animation
+        if animation == "CgADBAADcwMAAsNFiVKRKWfct4l-jxYE":
+            self.torrent_level = 0
 
     def reply(self):
         if random.random()*10 < self.torrent_level:
@@ -107,6 +115,9 @@ class Chat:
         walker = random.choice(list(self.model.keys()))
         answer = [walker]
         while True:
+            filtered_walker = ''.join(filter(lambda ch: ch.isalnum(), walker))
+            if len(filtered_walker) > 0:
+                walker = filtered_walker
             new_token = random.choice(self.model[walker])
             if new_token == END:
                 break
@@ -136,6 +147,13 @@ class Chat:
     def disable_learning(self):
         self.is_learning = False
 
+    def filter_word(self, word):
+        filtered_word = ""
+        for ch in word:
+            if ch.isalnum():
+                filtered_word += ch
+        return filtered_word
+    )
     def __str__(self):
         jsonification = {"torrent_level": self.torrent_level,
                          "is_learning": self.is_learning,
