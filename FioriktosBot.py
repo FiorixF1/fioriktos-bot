@@ -58,7 +58,10 @@ class Chat:
             for i in range(len(tokens)-1):
                 token = tokens[i]
                 successor = tokens[i+1]
-                
+
+                if len(token) > 0 and token[-1] in ENDING_PUNCTUATION_MARKS:
+                    successor = END
+
                 # use the token without special characters only when it is not an empty string
                 filtered_token = ''.join(filter(lambda ch: ch.isalnum(), token))
                 if filtered_token != token and len(filtered_token) > 0:
@@ -67,9 +70,6 @@ class Chat:
 
                 if token not in self.model:
                     self.model[token] = list()
-
-                if token[-1] in ENDING_PUNCTUATION_MARKS:
-                    successor = END
 
                 if len(self.model[token]) < 200:
                     self.model[token].append(successor)
