@@ -68,18 +68,14 @@ class Chat:
                 if token not in self.model:
                     self.model[token] = list()
 
+                if token[-1] in ENDING_PUNCTUATION_MARKS:
+                    successor = END
+
                 if len(self.model[token]) < 200:
                     self.model[token].append(successor)
                 else:
                     guess = random.randint(0, 199)
                     self.model[token][guess] = successor
-
-                if type(token) == type("A") and token[-1] in ENDING_PUNCTUATION_MARKS:
-                    if len(self.model[token]) < 200:
-                        self.model[token].append(END)
-                    else:
-                        guess = random.randint(0, 199)
-                        self.model[token][guess] = END
 
     def learn_sticker(self, sticker):
         if self.is_learning:
@@ -189,7 +185,7 @@ def serializer(f):
         f(bot, update, *args, **kwargs)
         
         REQUEST_COUNTER += 1
-        if REQUEST_COUNTER % 100 == 0:
+        if REQUEST_COUNTER % 25 == 0:
             sync_db()
             
     return wrapped
