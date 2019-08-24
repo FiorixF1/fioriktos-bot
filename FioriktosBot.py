@@ -4,6 +4,7 @@ from os import environ
 import psycopg2
 import logging
 import random
+import time
 import json
 
 # Abilita log
@@ -45,6 +46,7 @@ class Chat:
         self.model = { "...":  [END] }
         self.stickers = []
         self.animations = []
+        self.last_update = time.time()
 
     def learn_text(self, text):
         if self.is_learning:
@@ -148,7 +150,8 @@ class Chat:
                          "is_learning": self.is_learning,
                          "model": self.model,
                          "stickers": self.stickers,
-                         "animations": self.animations}
+                         "animations": self.animations,
+                         "last_update": self.last_update}
         return json.dumps(jsonification, indent=2)
 
 
@@ -174,6 +177,7 @@ def chat_finder(f):
         except:
             chat = Chat()
             CHATS[chat_id] = chat
+        chat.last_update = time.time()
         f(bot, update, chat, *args, **kwargs)
     return wrapped
 
@@ -187,6 +191,7 @@ def serializer(f):
         REQUEST_COUNTER += 1
         if REQUEST_COUNTER % 25 == 0:
             sync_db()
+            delete_old_chats()
             
     return wrapped
 
@@ -322,6 +327,7 @@ def unjsonify(data):
         deserialized_chat.model = jsonized_chat["model"]
         deserialized_chat.stickers = jsonized_chat["stickers"]
         deserialized_chat.animations = jsonized_chat["animations"]
+        deserialized_chat.last_update = jsonized_chat["last_update"]
 
         CHATS[int(chat_id)] = deserialized_chat
 
@@ -346,6 +352,12 @@ def sync_db():
     connection.commit()
     cursor.close()
     connection.close()
+
+def delete_old_chats():
+    now = time.time()
+    for chat_id in list(CHATS.keys()):
+        if now - CHATS[chat_id].last_update > 7776000:
+            del CHATS[chat_id]
 
 def error(bot, update, error):
     """Log Errors caused by Updates."""
