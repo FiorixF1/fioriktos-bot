@@ -8,6 +8,7 @@ This is a Telegram bot which uses Markov chains to learn how to speak given the 
     torrent - Automatic replies
     enablelearning - Enable learning
     disablelearning - Disable learning
+    gdpr - Privacy stuff
 ```
 
 The extra command ```serialize``` can be issued only by the administrator of the bot. It serializes the bot state into a file sent to the administrator. This makes possible for the administrator to shutdown the bot without loosing the learnt models or to transfer them in other groups without starting from an empty model.

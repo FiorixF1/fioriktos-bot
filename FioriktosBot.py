@@ -26,6 +26,15 @@ MESSAGE = "Message"
 STICKER = "Sticker"
 ANIMATION = "Animation"
 
+GDPR = "To work correctly, I need to store these information for each chat:" + \
+       "\n- Chat ID" + \
+       "\n- Sent messages" + \
+       "\n- Sent stickers" + \
+       "\n- Sent gifs" + \
+       "\nI don't store any information about users, such as user ID, username, profile picture..." + \
+       "\nData are automatically deleted after 90 days of inactivity." + \
+       "\nFor more information, you can visit https://www.github.com/FiorixF1/fioriktos-bot.git or contact my developer @FiorixF1."
+
 
 
 """ Variabili di stato globali """
@@ -268,6 +277,11 @@ def learn_animation_and_reply(bot, update, chat):
     chat.learn_animation(update.message.animation.file_id)
     reply(bot, update, chat)
 
+@serializer
+@chat_finder
+def gdpr(bot, update, chat):
+    bot.send_message(chat_id=update.message.chat_id, text=GDPR)
+
 def reply(bot, update, chat):
     response = chat.reply()
 
@@ -407,6 +421,7 @@ def main():
     dp.add_handler(CommandHandler("torrent", torrent, pass_args=True))
     dp.add_handler(CommandHandler("enablelearning", enable_learning))
     dp.add_handler(CommandHandler("disablelearning", disable_learning))
+    dp.add_handler(CommandHandler("gdpr", gdpr))
     dp.add_handler(CommandHandler("serialize", serialize))
 
     # on noncommand i.e message
