@@ -20,6 +20,7 @@ DATABASE_URL = environ.get("DATABASE_URL")
 HEROKU_APP_NAME = "fioriktos"
 PORT = int(environ.get("PORT", "8443"))
 
+BEGIN = ""
 END = 0
 ENDING_PUNCTUATION_MARKS = ".!?\n"
 MESSAGE = "Message"
@@ -52,41 +53,37 @@ class Chat:
     def __init__(self):
         self.torrent_level = 0
         self.is_learning = True
-        self.model = { "...":  [END] }
+        self.model = { BEGIN: [END] }
         self.stickers = []
         self.animations = []
         self.last_update = time.time()
 
     def learn_text(self, text):
         if self.is_learning:
-            # pre-processing and filtering
-            text = text.replace('\n', '. ')
-            tokens = text.lower().split()
-            tokens = list(filter(lambda x: "http" not in x, tokens))
-            tokens.append(END)            
+            for sentence in text.lower().split('\n'):
+                # pre-processing and filtering
+                tokens = sentence().split()
+                tokens = [BEGIN] + list(filter(lambda x: "http" not in x, tokens)) + [END]
 
-            # actual learning
-            for i in range(len(tokens)-1):
-                token = tokens[i]
-                successor = tokens[i+1]
+                # actual learning
+                for i in range(len(tokens)-1):
+                    token = tokens[i]
+                    successor = tokens[i+1]
 
-                if len(token) > 0 and token[-1] in ENDING_PUNCTUATION_MARKS:
-                    successor = END
+                    # use the token without special characters
+                    filtered_token = ''.join(filter(lambda ch: ch.isalnum(), token))
+                    if filtered_token != token:
+                        self.model[token] = list()
+                        token = filtered_token
 
-                # use the token without special characters only when it is not an empty string
-                filtered_token = ''.join(filter(lambda ch: ch.isalnum(), token))
-                if filtered_token != token and len(filtered_token) > 0:
-                    self.model[token] = list()
-                    token = filtered_token
+                    if token not in self.model:
+                        self.model[token] = list()
 
-                if token not in self.model:
-                    self.model[token] = list()
-
-                if len(self.model[token]) < 200:
-                    self.model[token].append(successor)
-                else:
-                    guess = random.randint(0, 199)
-                    self.model[token][guess] = successor
+                    if len(self.model[token]) < 200:
+                        self.model[token].append(successor)
+                    else:
+                        guess = random.randint(0, 199)
+                        self.model[token][guess] = successor
 
     def learn_sticker(self, sticker):
         if self.is_learning:
