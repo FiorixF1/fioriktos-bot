@@ -62,7 +62,7 @@ class Chat:
         if self.is_learning:
             for sentence in text.lower().split('\n'):
                 # pre-processing and filtering
-                tokens = sentence().split()
+                tokens = sentence.split()
                 tokens = [BEGIN] + list(filter(lambda x: "http" not in x, tokens)) + [END]
 
                 # actual learning
