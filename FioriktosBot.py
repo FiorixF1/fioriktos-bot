@@ -60,7 +60,7 @@ class Chat:
 
     def learn_text(self, text):
         if self.is_learning:
-            for sentence in text.lower().split('\n'):
+            for sentence in text.split('\n'):
                 # pre-processing and filtering
                 tokens = sentence.split()
                 tokens = [BEGIN] + list(filter(lambda x: "http" not in x, tokens)) + [END]
@@ -71,7 +71,7 @@ class Chat:
                     successor = tokens[i+1]
 
                     # use the token without special characters
-                    filtered_token = ''.join(filter(lambda ch: ch.isalnum(), token))
+                    filtered_token = ''.join(filter(lambda ch: ch.isalnum(), token)).lower()
                     if filtered_token != token:
                         self.model[token] = list()
                         token = filtered_token
@@ -119,7 +119,7 @@ class Chat:
         walker = random.choice(list(self.model.keys()))
         answer = [walker]
         while True:
-            filtered_walker = ''.join(filter(lambda ch: ch.isalnum(), walker))
+            filtered_walker = ''.join(filter(lambda ch: ch.isalnum(), walker)).lower()
             if filtered_walker != walker:
                 walker = filtered_walker
             new_token = random.choice(self.model[walker])
