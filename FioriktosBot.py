@@ -27,6 +27,9 @@ MESSAGE = "Message"
 STICKER = "Sticker"
 ANIMATION = "Animation"
 
+HOLY_ENTITIES = ['fioriktos', 'adrian', 'bandana', 'droni']
+PROFANITIES = ['merda', 'colera']
+
 GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\n- Chat ID" + \
        "\n- Sent messages" + \
@@ -84,6 +87,10 @@ class Chat:
                     else:
                         guess = random.randint(0, 199)
                         self.model[token][guess] = successor
+            # post-processing
+            for entity in HOLY_ENTITIES:
+                if entity in self.model:
+                    self.model[entity] = list(filter(lambda x: x not in PROFANITIES, self.model[entities]))
 
     def learn_sticker(self, sticker):
         if self.is_learning:
