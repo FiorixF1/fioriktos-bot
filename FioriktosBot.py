@@ -74,7 +74,7 @@ class Chat:
                     successor = tokens[i+1]
 
                     # use the token without special characters
-                    filtered_token = ''.join(filter(lambda ch: ch.isalnum(), token)).lower()
+                    filtered_token = self.filter(token)
                     if filtered_token != token:
                         self.model[token] = list()
                         token = filtered_token
@@ -90,7 +90,7 @@ class Chat:
             # post-processing
             for entity in HOLY_ENTITIES:
                 if entity in self.model:
-                    self.model[entity] = list(filter(lambda x: x not in PROFANITIES, self.model[entities]))
+                    self.model[entity] = list(filter(lambda x: self.filter(x) not in PROFANITIES, self.model[entity]))
                     if len(self.model[entity]) == 0:
                         self.model[entity].append(END)
 
@@ -128,7 +128,7 @@ class Chat:
         walker = random.choice(list(self.model.keys()))
         answer = [walker]
         while True:
-            filtered_walker = ''.join(filter(lambda ch: ch.isalnum(), walker)).lower()
+            filtered_walker = self.filter(walker)
             if filtered_walker != walker:
                 walker = filtered_walker
             new_token = random.choice(self.model[walker])
@@ -160,6 +160,9 @@ class Chat:
     def disable_learning(self):
         self.is_learning = False
 
+    def filter(self, word):
+        return ''.join(filter(lambda ch: ch.isalnum(), word)).lower()
+        
     def __str__(self):
         jsonification = {"torrent_level": self.torrent_level,
                          "is_learning": self.is_learning,
