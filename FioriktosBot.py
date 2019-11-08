@@ -91,6 +91,8 @@ class Chat:
             for entity in HOLY_ENTITIES:
                 if entity in self.model:
                     self.model[entity] = list(filter(lambda x: x not in PROFANITIES, self.model[entities]))
+                    if len(self.model[entity]) == 0:
+                        self.model[entity].append(END)
 
     def learn_sticker(self, sticker):
         if self.is_learning:
