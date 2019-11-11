@@ -54,7 +54,7 @@ REQUEST_COUNTER = 0 # for automatic serialization on database
 """ Strutture dati """
 class Chat:
     def __init__(self):
-        self.torrent_level = 0
+        self.torrent_level = 5
         self.is_learning = True
         self.model = { BEGIN: [END] }
         self.stickers = []
@@ -161,6 +161,8 @@ class Chat:
         self.is_learning = False
 
     def filter(self, word):
+        if type(word) != type(''):
+            return word
         return ''.join(filter(lambda ch: ch.isalnum(), word)).lower()
         
     def __str__(self):
