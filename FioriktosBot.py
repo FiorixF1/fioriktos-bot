@@ -307,6 +307,8 @@ def reply(bot, update, chat):
                 bot.send_sticker(chat_id=update.message.chat_id, sticker=content)
             elif type_of_response == ANIMATION:
                 bot.send_animation(chat_id=update.message.chat_id, animation=content)
+        else:
+            bot.send_message(chat_id=update.message.chat_id, text="NAK")
 
 # by file
 def serialize(bot, update):
