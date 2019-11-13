@@ -225,7 +225,10 @@ def start(bot, update):
 @chat_finder
 def fioriktos(bot, update, chat):
     reply = chat.talk()
-    bot.send_message(chat_id=update.message.chat_id, text=reply)
+    if reply != "":
+        bot.send_message(chat_id=update.message.chat_id, text=reply)
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text="NAK")
 
 @serializer
 @chat_finder
