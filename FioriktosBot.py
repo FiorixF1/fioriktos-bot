@@ -113,7 +113,7 @@ class Chat:
             self.torrent_level = 0
 
     def reply(self):
-        if random.random()*10 < self.torrent_level:
+        if random.random()*10 < self.torrent_level**2/10:
             if random.random()*10 < 9.5:
                 return (MESSAGE, self.talk())
             else:
