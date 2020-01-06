@@ -47,7 +47,7 @@ ADMINS = [FIORIXF1]
 ADMINS_USERNAME = { FIORIXF1: "FiorixF1",
                   }
 CHATS = dict()      # key = chat_id --- value = object Chat
-BLOCKED_CHATS = [-1001184921024]
+BLOCKED_CHATS = []
 REQUEST_COUNTER = 0 # for automatic serialization on database
 
 
