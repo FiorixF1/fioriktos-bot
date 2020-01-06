@@ -193,15 +193,16 @@ def chat_finder(f):
     @wraps(f)
     def wrapped(bot, update, *args, **kwargs):
         chat_id = update.message.chat_id
-        if int(chat_id) in BLOCKED_CHATS:
-            bot.send_message(chat_id=chat_id, text="NAK - SCIOPERO")
-            return
         try:
             chat = CHATS[chat_id]
         except:
             chat = Chat()
             CHATS[chat_id] = chat
         chat.last_update = time.time()
+        if int(chat_id) in BLOCKED_CHATS:
+            if update.message.text.startswith('/'):
+                bot.send_message(chat_id=chat_id, text="NAK // SCIOPERO")
+            return
         f(bot, update, chat, *args, **kwargs)
     return wrapped
 
