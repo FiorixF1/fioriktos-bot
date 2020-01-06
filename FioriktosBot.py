@@ -195,6 +195,7 @@ def chat_finder(f):
         chat_id = update.message.chat_id
         if int(chat_id) in BLOCKED_CHATS:
             bot.send_message(chat_id=chat_id, text="NAK - SCIOPERO")
+            return
         try:
             chat = CHATS[chat_id]
         except:
