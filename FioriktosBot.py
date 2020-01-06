@@ -233,7 +233,7 @@ def fioriktos(bot, update, chat):
     if reply != "":
         bot.send_message(chat_id=update.message.chat_id, text=reply)
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK")
+        bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty chain")
 
 @serializer
 @chat_finder
@@ -242,7 +242,7 @@ def choose_sticker(bot, update, chat):
     if reply != "":
         bot.send_sticker(chat_id=update.message.chat_id, sticker=reply)
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK")
+        bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty sticker set")
 
 @serializer
 @chat_finder
@@ -251,7 +251,7 @@ def choose_animation(bot, update, chat):
     if reply != "":
         bot.send_animation(chat_id=update.message.chat_id, animation=reply)
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK")
+        bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty gif set")
 
 @serializer
 @chat_finder
@@ -259,12 +259,12 @@ def torrent(bot, update, chat, args):
     try:
         quantity = int(args[0])
         if quantity < 0 or quantity > 10:
-            bot.send_message(chat_id=update.message.chat_id, text="Send /torrent with a number between 0 and 10.")
+            bot.send_message(chat_id=update.message.chat_id, text="NAK // Send /torrent with a number between 0 and 10.")
         else:
             chat.torrent_level = quantity
             bot.send_message(chat_id=update.message.chat_id, text="ACK")
     except:
-        bot.send_message(chat_id=update.message.chat_id, text="Send /torrent with a number between 0 and 10.")
+        bot.send_message(chat_id=update.message.chat_id, text="NAK // Send /torrent with a number between 0 and 10.")
 
 @serializer
 @chat_finder
@@ -277,6 +277,15 @@ def enable_learning(bot, update, chat):
 def disable_learning(bot, update, chat):
     chat.disable_learning()
     bot.send_message(chat_id=update.message.chat_id, text="Learning disabled")
+
+@serializer    
+@chat_finder
+def bof(bot, update, chat):
+    if not update.message.photo:
+        bot.send_message(chat_id=update.message.chat_id, text="NAK // Send a screenshot with /bof in the description, you could get published on @BestOfFioriktos")
+    if update.message.caption and "/bof" in update.message.caption:
+        bot.send_photo(chat_id=FIORIXF1, photo=update.message.photo[-1])
+        bot.send_message(chat_id=update.message.chat_id, text="ACK")
 
 @serializer
 @chat_finder
@@ -340,7 +349,7 @@ def deserialize(bot, update):
 
             bot.send_message(chat_id=update.message.chat_id, text="ACK")
         except Exception as e:
-            bot.send_message(chat_id=update.message.chat_id, text="NAK")
+            bot.send_message(chat_id=update.message.chat_id, text="NAK // Parsing error")
             print(e)
 
 def jsonify():
@@ -442,6 +451,7 @@ def main():
     dp.add_handler(CommandHandler("torrent", torrent, pass_args=True))
     dp.add_handler(CommandHandler("enablelearning", enable_learning))
     dp.add_handler(CommandHandler("disablelearning", disable_learning))
+    dp.add_handler(CommandHandler("bof", bof))
     dp.add_handler(CommandHandler("gdpr", gdpr))
     dp.add_handler(CommandHandler("serialize", serialize))
 
@@ -449,6 +459,7 @@ def main():
     dp.add_handler(MessageHandler(Filters.text, learn_text_and_reply))
     dp.add_handler(MessageHandler(Filters.sticker, learn_sticker_and_reply))
     dp.add_handler(MessageHandler(Filters.animation, learn_animation_and_reply))
+    dp.add_handler(MessageHandler(Filters.photo, bof))
     dp.add_handler(MessageHandler(Filters.document, deserialize))
 
     # log all errors
