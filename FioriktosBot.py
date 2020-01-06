@@ -47,6 +47,7 @@ ADMINS = [FIORIXF1]
 ADMINS_USERNAME = { FIORIXF1: "FiorixF1",
                   }
 CHATS = dict()      # key = chat_id --- value = object Chat
+BLOCKED_CHATS = [-1001184921024]
 REQUEST_COUNTER = 0 # for automatic serialization on database
 
 
@@ -192,6 +193,8 @@ def chat_finder(f):
     @wraps(f)
     def wrapped(bot, update, *args, **kwargs):
         chat_id = update.message.chat_id
+        if int(chat_id) in BLOCKED_CHATS:
+            bot.send_message(chat_id=chat_id, text="NAK - SCIOPERO")
         try:
             chat = CHATS[chat_id]
         except:
