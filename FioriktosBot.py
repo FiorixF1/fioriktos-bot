@@ -126,7 +126,7 @@ class Chat:
         return ""
 
     def talk(self):
-        walker = random.choice(list(self.model.keys()))
+        walker = BEGIN if random.random() < 0.5 else random.choice(list(self.model.keys()))
         answer = [walker]
         while True:
             filtered_walker = self.filter(walker)
