@@ -133,8 +133,12 @@ class Chat:
             if filtered_walker != walker:
                 walker = filtered_walker
             new_token = random.choice(self.model[walker])
+            # avoid empty messages with non empty model
+            if new_token == END and len(answer) == 1 and len(set(self.model[BEGIN])) > 1:
+               while new_token == END:
+                  new_token = random.choice(self.model[walker])
             if new_token == END:
-                break
+               break
             answer.append(new_token)
             walker = new_token
         return ' '.join(answer)
