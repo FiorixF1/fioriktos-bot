@@ -136,7 +136,7 @@ class Chat:
             # avoid empty messages with non empty model
             if new_token == END and len(answer) == 1 and len(set(self.model[BEGIN])) > 1:
                while new_token == END:
-                  new_token = random.choice(self.model[walker])
+                  new_token = random.choice(self.model[BEGIN])
             if new_token == END:
                break
             answer.append(new_token)
