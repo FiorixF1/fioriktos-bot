@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 
-""" Costanti """
+""" Constants """
 BOT_TOKEN = environ.get("BOT_TOKEN")
 DATABASE_URL = environ.get("DATABASE_URL")
 HEROKU_APP_NAME = "fioriktos"
@@ -27,9 +27,6 @@ MESSAGE = "Message"
 STICKER = "Sticker"
 ANIMATION = "Animation"
 
-HOLY_ENTITIES = ['fioriktos', 'adrian', 'bandana', 'droni']
-PROFANITIES = ['merda', 'colera']
-
 GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\n- Chat ID" + \
        "\n- Sent messages" + \
@@ -41,7 +38,7 @@ GDPR = "To work correctly, I need to store these information for each chat:" + \
 
 
 
-""" Variabili di stato globali """
+""" Global state variables """
 FIORIXF1 = 289439604
 ADMINS = [FIORIXF1]
 ADMINS_USERNAME = { FIORIXF1: "FiorixF1",
@@ -52,7 +49,7 @@ REQUEST_COUNTER = 0 # for automatic serialization on database
 
 
 
-""" Strutture dati """
+""" Data structures """
 class Chat:
     def __init__(self):
         self.torrent_level = 5
@@ -88,12 +85,6 @@ class Chat:
                     else:
                         guess = random.randint(0, 199)
                         self.model[token][guess] = successor
-            # post-processing
-            for entity in HOLY_ENTITIES:
-                if entity in self.model:
-                    self.model[entity] = list(filter(lambda x: self.filter(x) not in PROFANITIES, self.model[entity]))
-                    if len(self.model[entity]) == 0:
-                        self.model[entity].append(END)
 
     def learn_sticker(self, sticker):
         if self.is_learning:
@@ -159,6 +150,9 @@ class Chat:
         if new_level >= 0 and new_level <= 10:
             self.torrent_level = new_level
 
+    def get_torrent(self):
+        return self.torrent_level
+
     def enable_learning(self):
         self.is_learning = True
 
@@ -181,7 +175,7 @@ class Chat:
 
 
 
-""" Decoratori """
+""" Decorators """
 def restricted(f):
     @wraps(f)
     def wrapped(bot, update, *args, **kwargs):
@@ -226,7 +220,7 @@ def serializer(f):
 
 
 
-""" Comandi """
+""" Commands """
 def start(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text="SYN")
     
@@ -265,10 +259,15 @@ def torrent(bot, update, chat, args):
         if quantity < 0 or quantity > 10:
             bot.send_message(chat_id=update.message.chat_id, text="NAK // Send /torrent with a number between 0 and 10.")
         else:
-            chat.torrent_level = quantity
+            chat.set_torrent(quantity)
             bot.send_message(chat_id=update.message.chat_id, text="ACK")
     except:
         bot.send_message(chat_id=update.message.chat_id, text="NAK // Send /torrent with a number between 0 and 10.")
+
+@serializer
+@chat_finder
+def torrent_question_mark(bot, update, chat):
+    bot.send_message(chat_id=update.message.chat_id, text=str(chat.get_torrent()))
 
 @serializer
 @chat_finder
@@ -287,7 +286,7 @@ def disable_learning(bot, update, chat):
 def bof(bot, update, chat):
     if not update.message.photo:
         bot.send_message(chat_id=update.message.chat_id, text="NAK // Send a screenshot with /bof in the description, you could get published on @BestOfFioriktos")
-    if update.message.caption and "/bof" in update.message.caption:
+    if update.message.caption and ("/bof" in update.message.caption or "/bestoffioriktos" in update.message.caption):
         bot.send_photo(chat_id=FIORIXF1, photo=update.message.photo[-1])
         bot.send_message(chat_id=update.message.chat_id, text="ACK")
 
@@ -400,6 +399,7 @@ def sync_db():
     connection.commit()
     cursor.close()
     connection.close()
+    # WARNING: do not use this technique to update a database with critical data ^_^
 
 def delete_old_chats():
     now = time.time()
@@ -453,9 +453,11 @@ def main():
     dp.add_handler(CommandHandler("sticker", choose_sticker))
     dp.add_handler(CommandHandler("gif", choose_animation))
     dp.add_handler(CommandHandler("torrent", torrent, pass_args=True))
+    dp.add_handler(CommandHandler("torrent?", torrent_question_mark))
     dp.add_handler(CommandHandler("enablelearning", enable_learning))
     dp.add_handler(CommandHandler("disablelearning", disable_learning))
     dp.add_handler(CommandHandler("bof", bof))
+    dp.add_handler(CommandHandler("bestoffioriktos", bof))
     dp.add_handler(CommandHandler("gdpr", gdpr))
     dp.add_handler(CommandHandler("serialize", serialize))
 
