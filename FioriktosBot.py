@@ -2,6 +2,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from functools import wraps
 from os import environ
 import psycopg2
+import zipfile
 import logging
 import random
 import time
@@ -163,7 +164,7 @@ class Chat:
         if type(word) != type(''):
             return word
         return ''.join(filter(lambda ch: ch.isalnum(), word)).lower()
-        
+
     def __str__(self):
         jsonification = {"torrent_level": self.torrent_level,
                          "is_learning": self.is_learning,
@@ -208,14 +209,14 @@ def serializer(f):
     @wraps(f)
     def wrapped(bot, update, *args, **kwargs):
         global REQUEST_COUNTER
-    
+
         f(bot, update, *args, **kwargs)
-        
+
         REQUEST_COUNTER += 1
         if REQUEST_COUNTER % 25 == 0:
             sync_db()
             delete_old_chats()
-            
+
     return wrapped
 
 
@@ -223,7 +224,7 @@ def serializer(f):
 """ Commands """
 def start(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text="SYN")
-    
+
 @serializer
 @chat_finder
 def fioriktos(bot, update, chat):
@@ -275,13 +276,13 @@ def enable_learning(bot, update, chat):
     chat.enable_learning()
     bot.send_message(chat_id=update.message.chat_id, text="Learning enabled")
 
-@serializer    
+@serializer
 @chat_finder
 def disable_learning(bot, update, chat):
     chat.disable_learning()
     bot.send_message(chat_id=update.message.chat_id, text="Learning disabled")
 
-@serializer    
+@serializer
 @chat_finder
 def bof(bot, update, chat):
     if not update.message.photo:
@@ -319,7 +320,7 @@ def reply(bot, update, chat):
     if len(response) == 2:
         type_of_response = response[0]
         content = response[1]
-        
+
         if content != "":
             if type_of_response == MESSAGE:
                 bot.send_message(chat_id=update.message.chat_id, text=content)
@@ -340,11 +341,15 @@ def serialize(bot, update):
 
 # by file
 def deserialize(bot, update):
-    if update.effective_user.id in ADMINS and update.message.document.mime_type == "text/plain":
+    if update.effective_user.id in ADMINS and update.message.document.mime_type == "application/zip":
         try:
+            # Telegram bots can read files up to 20 MB
+            # bypass this by sending dump.txt compressed into a zip archive
             file_id = update.message.document.file_id
-            bot.get_file(file_id).download('dump.txt')
+            bot.get_file(file_id).download("dump.zip")
 
+            with zipfile.ZipFile("dump.zip", "r") as dump:
+                dump.extractall(".")
             with open("dump.txt", "r") as dump:
                 data = dump.read()
             unjsonify(data)
@@ -352,7 +357,7 @@ def deserialize(bot, update):
 
             bot.send_message(chat_id=update.message.chat_id, text="ACK")
         except Exception as e:
-            bot.send_message(chat_id=update.message.chat_id, text="NAK // Parsing error")
+            bot.send_message(chat_id=update.message.chat_id, text="NAK // {}".format(e))
             print(e)
 
 def jsonify():
@@ -380,7 +385,7 @@ def unjsonify(data):
 
 def sync_db():
     data = jsonify()
-            
+
     # delete everything
     connection = psycopg2.connect(DATABASE_URL, sslmode='require')
     cursor = connection.cursor()
@@ -388,10 +393,10 @@ def sync_db():
     connection.commit()
     cursor.close()
     connection.close()
-            
+
     # add newer data
     data = [data[i:i+65536] for i in range(0, len(data), 65536)]
-            
+
     connection = psycopg2.connect(DATABASE_URL, sslmode='require')
     cursor = connection.cursor()
     for i in range(len(data)):
@@ -415,7 +420,7 @@ def error(bot, update, error):
 
 def main():
     """Start the bot"""
-    
+
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  #
     # Database connection (needed for deploying the app on Heroku)       #
     #                                                                    #
@@ -431,7 +436,7 @@ def main():
     cursor = connection.cursor()
     cursor.execute("SELECT * FROM fioriktos ORDER BY id ASC;")
     records = cursor.fetchall()
-    
+
     stored_data = ''.join( [row[1] for row in records] )
     if stored_data != '':
         unjsonify(stored_data)
@@ -470,7 +475,7 @@ def main():
 
     # log all errors
     dp.add_error_handler(error)
-    
+
     # start the Bot
     #updater.start_polling()
 
@@ -478,7 +483,7 @@ def main():
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.
     #updater.idle()
-    
+
     updater.start_webhook(listen="0.0.0.0",
                           port=PORT,
                           url_path=BOT_TOKEN)
