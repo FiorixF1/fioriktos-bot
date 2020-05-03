@@ -338,7 +338,7 @@ def reply(bot, update, chat):
 def serialize(bot, update):
     try:
         data = store_db()
-        with open("dump.txt", "wb") as dump:
+        with open("dump.txt", "w") as dump:
             dump.write(data)
         bot.send_document(chat_id=update.message.chat_id, document=open("dump.txt", "rb"))
     except Exception as e:
