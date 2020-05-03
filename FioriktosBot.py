@@ -2,9 +2,9 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from functools import wraps
 from os import environ
 import psycopg2
-import zipfile
 import logging
 import random
+import boto3
 import time
 import json
 
@@ -17,9 +17,12 @@ logger = logging.getLogger(__name__)
 
 """ Constants """
 BOT_TOKEN = environ.get("BOT_TOKEN")
+HEROKU_APP_NAME = environ.get("HEROKU_APP_NAME")
 DATABASE_URL = environ.get("DATABASE_URL")
-HEROKU_APP_NAME = "fioriktos"
 PORT = int(environ.get("PORT", "8443"))
+AWS_ACCESS_KEY_ID = environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = environ.get("AWS_SECRET_ACCESS_KEY")
+S3_BUCKET_NAME = environ.get("S3_BUCKET_NAME")
 
 BEGIN = ""
 END = 0
@@ -214,7 +217,7 @@ def serializer(f):
 
         REQUEST_COUNTER += 1
         if REQUEST_COUNTER % 25 == 0:
-            sync_db()
+            store_db()
             delete_old_chats()
 
     return wrapped
@@ -287,7 +290,7 @@ def disable_learning(bot, update, chat):
 def bof(bot, update, chat):
     if not update.message.photo:
         bot.send_message(chat_id=update.message.chat_id, text="NAK // Send a screenshot with /bof in the description, you could get published on @BestOfFioriktos")
-    if update.message.caption and ("/bof" in update.message.caption or "/bestoffioriktos" in update.message.caption):
+    elif update.message.caption and ("/bof" in update.message.caption or "/bestoffioriktos" in update.message.caption):
         bot.send_photo(chat_id=FIORIXF1, photo=update.message.photo[-1])
         bot.send_message(chat_id=update.message.chat_id, text="ACK")
 
@@ -331,34 +334,38 @@ def reply(bot, update, chat):
         else:
             bot.send_message(chat_id=update.message.chat_id, text="NAK")
 
-# by file
+@restricted
 def serialize(bot, update):
-    if update.effective_user.id in ADMINS:
-        data = jsonify()
-        with open("dump.txt", "w") as dump:
+    try:
+        data = store_db()
+        with open("dump.txt", "wb") as dump:
             dump.write(data)
-        bot.send_document(chat_id=update.message.chat_id, document=open("dump.txt", 'rb'))
+        bot.send_document(chat_id=update.message.chat_id, document=open("dump.txt", "rb"))
+    except Exception as e:
+        bot.send_message(chat_id=update.message.chat_id, text="NAK // {}".format(e))
+        print(e)
 
-# by file
+@restricted
 def deserialize(bot, update):
-    if update.effective_user.id in ADMINS and update.message.document.mime_type == "application/zip":
-        try:
-            # Telegram bots can read files up to 20 MB
-            # bypass this by sending dump.txt compressed into a zip archive
-            file_id = update.message.document.file_id
-            bot.get_file(file_id).download("dump.zip")
+    try:
+        load_db()
+        bot.send_message(chat_id=update.message.chat_id, text="ACK")
+    except Exception as e:
+        bot.send_message(chat_id=update.message.chat_id, text="NAK // {}".format(e))
+        print(e)
 
-            with zipfile.ZipFile("dump.zip", "r") as dump:
-                dump.extractall(".")
-            with open("dump.txt", "r") as dump:
-                data = dump.read()
-            unjsonify(data)
-            sync_db()
+def load_db():
+    s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+    dump = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key="dump.txt")
+    data = dump['Body'].read()
+    unjsonify(data)
+    return data
 
-            bot.send_message(chat_id=update.message.chat_id, text="ACK")
-        except Exception as e:
-            bot.send_message(chat_id=update.message.chat_id, text="NAK // {}".format(e))
-            print(e)
+def store_db():
+    data = jsonify()
+    s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+    s3_client.put_object(Body=data.encode(), Bucket=S3_BUCKET_NAME, Key="dump.txt")
+    return data
 
 def jsonify():
     jsonification = dict()
@@ -383,29 +390,6 @@ def unjsonify(data):
 
         CHATS[int(chat_id)] = deserialized_chat
 
-def sync_db():
-    data = jsonify()
-
-    # delete everything
-    connection = psycopg2.connect(DATABASE_URL, sslmode='require')
-    cursor = connection.cursor()
-    cursor.execute("DELETE FROM fioriktos;")
-    connection.commit()
-    cursor.close()
-    connection.close()
-
-    # add newer data
-    data = [data[i:i+65536] for i in range(0, len(data), 65536)]
-
-    connection = psycopg2.connect(DATABASE_URL, sslmode='require')
-    cursor = connection.cursor()
-    for i in range(len(data)):
-        cursor.execute("INSERT INTO fioriktos VALUES (%s, %s)", (i, data[i]))
-    connection.commit()
-    cursor.close()
-    connection.close()
-    # WARNING: do not use this technique to update a database with critical data ^_^
-
 def delete_old_chats():
     now = time.time()
     for chat_id in list(CHATS.keys()):
@@ -421,30 +405,8 @@ def error(bot, update, error):
 def main():
     """Start the bot"""
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  #
-    # Database connection (needed for deploying the app on Heroku)       #
-    #                                                                    #
-    # heroku pg:psql postgresql-solid-47100 --app fioriktos              #
-    #                                                                    #
-    # create table fioriktos (                                           #
-    #     id serial primary key,                                         #
-    #     json varchar(65536) not null                                   #
-    # );                                                                 #
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  #
-    connection = psycopg2.connect(DATABASE_URL, sslmode='require')
-
-    cursor = connection.cursor()
-    cursor.execute("SELECT * FROM fioriktos ORDER BY id ASC;")
-    records = cursor.fetchall()
-
-    stored_data = ''.join( [row[1] for row in records] )
-    if stored_data != '':
-        unjsonify(stored_data)
-
-    cursor.close()
-    connection.close()
-
-
+    # Restore data
+    load_db()
 
     # Create the EventHandler and pass it your bot's token
     updater = Updater(BOT_TOKEN)
@@ -465,13 +427,13 @@ def main():
     dp.add_handler(CommandHandler("bestoffioriktos", bof))
     dp.add_handler(CommandHandler("gdpr", gdpr))
     dp.add_handler(CommandHandler("serialize", serialize))
+    dp.add_handler(CommandHandler("deserialize", deserialize))
 
     # on noncommand i.e message
     dp.add_handler(MessageHandler(Filters.text, learn_text_and_reply))
     dp.add_handler(MessageHandler(Filters.sticker, learn_sticker_and_reply))
     dp.add_handler(MessageHandler(Filters.animation, learn_animation_and_reply))
     dp.add_handler(MessageHandler(Filters.photo, bof))
-    dp.add_handler(MessageHandler(Filters.document, deserialize))
 
     # log all errors
     dp.add_error_handler(error)
