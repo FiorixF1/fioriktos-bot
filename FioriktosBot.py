@@ -8,7 +8,7 @@ import boto3
 import time
 import json
 
-# Abilita log
+# Enable log
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,6 +39,16 @@ GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\nI don't store any information about users, such as user ID, username, profile picture..." + \
        "\nData are automatically deleted after 90 days of inactivity." + \
        "\nFor more information, you can visit https://www.github.com/FiorixF1/fioriktos-bot.git or contact my developer @FiorixF1."
+
+WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact with me using the following commands:" + \
+          "\n- /fioriktos : Let me generate a message" + \
+          "\n- /sticker : Let me send a sticker" + \
+          "\n- /gif : Let me send a gif" + \
+          "\n- /torrent n : Let me reply automatically to messages sent by others. The parameter n sets how much talkative I am and it must be a number between 0 and 10: with /torrent 10 I will answer all messages, while /torrent 0 will mute me. If you want to know my current parameter, send /torrent?" + \
+          "\n- You can enable or disable my learning ability with the commands /enablelearning and /disablelearning" + \
+          "\n- /bof : If I say something funny, you can make a screenshot and send it with this command in the description. Your screenshot could get published on @BestOfFioriktos" + \
+          "\n- /gdpr : Here you can have more info about privacy and visit my source code 💻"
+
 
 
 
@@ -317,6 +327,15 @@ def learn_animation_and_reply(bot, update, chat):
 def gdpr(bot, update, chat):
     bot.send_message(chat_id=update.message.chat_id, text=GDPR)
 
+@serializer
+@chat_finder
+def welcome(bot, update, chat):
+    # send welcome message only when added to new chat
+    if len(chat.model) == 1:
+        for member in update.message.new_chat_members:
+            if member.username == 'FioriktosBot':
+                bot.send_message(chat_id=update.message.chat_id, text=WELCOME)
+
 def reply(bot, update, chat):
     response = chat.reply()
 
@@ -429,12 +448,13 @@ def main():
     dp.add_handler(CommandHandler("serialize", serialize))
     dp.add_handler(CommandHandler("deserialize", deserialize))
 
-    # on noncommand i.e message
+    # on noncommand i.e. message
     dp.add_handler(MessageHandler(Filters.text, learn_text_and_reply))
     dp.add_handler(MessageHandler(Filters.sticker, learn_sticker_and_reply))
     dp.add_handler(MessageHandler(Filters.animation, learn_animation_and_reply))
     dp.add_handler(MessageHandler(Filters.photo, bof))
-
+    dp.add_handler(MessageHandler(Filters.status_update.new_chat_members, welcome))
+    
     # log all errors
     dp.add_error_handler(error)
 
