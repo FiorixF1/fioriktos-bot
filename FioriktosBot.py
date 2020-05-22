@@ -57,9 +57,9 @@ FIORIXF1 = 289439604
 ADMINS = [FIORIXF1]
 ADMINS_USERNAME = { FIORIXF1: "FiorixF1",
                   }
-CHATS = dict()      # key = chat_id --- value = object Chat
+CHATS = dict()          # key = chat_id --- value = object Chat
 BLOCKED_CHATS = []
-REQUEST_COUNTER = 0 # for automatic serialization on database
+LAST_SYNC = time.time() # for automatic serialization on database
 
 
 
@@ -221,14 +221,15 @@ def chat_finder(f):
 def serializer(f):
     @wraps(f)
     def wrapped(bot, update, *args, **kwargs):
-        global REQUEST_COUNTER
+        global LAST_SYNC
 
         f(bot, update, *args, **kwargs)
 
-        REQUEST_COUNTER += 1
-        if REQUEST_COUNTER % 25 == 0:
+        now = time.time()
+        if now - LAST_SYNC > 666:  # 37% rule
             store_db()
             delete_old_chats()
+            LAST_SYNC = now
 
     return wrapped
 
