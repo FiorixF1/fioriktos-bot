@@ -185,7 +185,7 @@ class Chat:
                          "stickers": self.stickers,
                          "animations": self.animations,
                          "last_update": self.last_update}
-        return json.dumps(jsonification, indent=2)
+        return json.dumps(jsonification)
 
 
 
@@ -391,7 +391,7 @@ def jsonify():
     jsonification = dict()
     for chat_id in CHATS:
         jsonification[chat_id] = str(CHATS[chat_id])
-    data = json.dumps(jsonification, indent=2)
+    data = json.dumps(jsonification)
     return data
 
 def unjsonify(data):
