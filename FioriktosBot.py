@@ -344,7 +344,7 @@ def thanos(bot, update, chat, args):
                                                                                                                                                                                                   len(chat.stickers),
                                                                                                                                                                                                   len(chat.animations),
                                                                                                                                                                                                   len(str(chat))))
-            time.sleep(3)
+            time.sleep(6)
             bot.send_animation(chat_id=update.message.chat_id, animation='CgACAgIAAxkBAAIJPl7agZWm2Ia02D9UjTJZTdhn1t1MAAKJBgAC1rzZSgPhAUy6TGNDGgQ')            
             
             # destroy half the chat
@@ -352,7 +352,7 @@ def thanos(bot, update, chat, args):
             # delete isolated words
             chat.clean()
             
-            time.sleep(3)
+            time.sleep(6)
             bot.send_message(chat_id=update.message.chat_id, text="Now this chat contains {} words, {} stickers and {} gifs for a total size of {} bytes.".format(len(chat.model),
                                                                                                                                                                   len(chat.stickers),
                                                                                                                                                                   len(chat.animations),
