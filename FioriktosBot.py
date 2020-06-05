@@ -46,17 +46,16 @@ WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact wit
           "\n- /gif : Let me send a gif" + \
           "\n- /torrent n : Let me reply automatically to messages sent by others. The parameter n sets how much talkative I am and it must be a number between 0 and 10: with /torrent 10 I will answer all messages, while /torrent 0 will mute me. If you want to know my current parameter, send /torrent?" + \
           "\n- You can enable or disable my learning ability with the commands /enablelearning and /disablelearning" + \
+          "\n- /thanos : This command will delete half the memory of the chat. Use it wisely!" + \
           "\n- /bof : If I say something funny, you can make a screenshot and send it with this command in the description. Your screenshot could get published on @BestOfFioriktos" + \
           "\n- /gdpr : Here you can have more info about privacy and visit my source code 💻"
-
 
 
 
 """ Global state variables """
 FIORIXF1 = 289439604
 ADMINS = [FIORIXF1]
-ADMINS_USERNAME = { FIORIXF1: "FiorixF1",
-                  }
+ADMINS_USERNAME = { FIORIXF1: "FiorixF1" }
 CHATS = dict()          # key = chat_id --- value = object Chat
 BLOCKED_CHATS = []
 LAST_SYNC = time.time() # for automatic serialization on database
@@ -94,26 +93,26 @@ class Chat:
                     if token not in self.model:
                         self.model[token] = list()
 
-                    if len(self.model[token]) < 200:
+                    if len(self.model[token]) < 256:
                         self.model[token].append(successor)
                     else:
-                        guess = random.randint(0, 199)
+                        guess = random.randint(0, 255)
                         self.model[token][guess] = successor
 
     def learn_sticker(self, sticker):
         if self.is_learning:
-            if len(self.stickers) < 500:
+            if len(self.stickers) < 1024:
                 self.stickers.append(sticker)
             else:
-                guess = random.randint(0, 499)
+                guess = random.randint(0, 1023)
                 self.stickers[guess] = sticker
 
     def learn_animation(self, animation):
         if self.is_learning:
-            if len(self.animations) < 500:
+            if len(self.animations) < 1024:
                 self.animations.append(animation)
             else:
-                guess = random.randint(0, 499)
+                guess = random.randint(0, 1023)
                 self.animations[guess] = animation
         if animation == "CgADBAADcwMAAsNFiVKRKWfct4l-jxYE":
             self.torrent_level = 0
@@ -173,6 +172,40 @@ class Chat:
     def disable_learning(self):
         self.is_learning = False
 
+    def halve(self):
+        for word in self.model:
+            length = len(self.model[word])
+            if length != 0:
+                self.model[word] = self.model[word][:length//2] + [END]
+        length = len(self.stickers)
+        self.stickers = self.stickers[:length//2]
+        length = len(self.animations)
+        self.animations = self.animations[:length//2]
+
+    def clean(self):
+        # find words that are not referenced by any other word: those can be deleted safely
+        words = set(self.model.keys())
+        referenced_words = { BEGIN }
+        for word in words:
+            for successor in self.model[word]:
+                referenced_words.add(successor)
+                referenced_words.add(self.filter(successor))
+        to_remove = words - referenced_words
+        del words, referenced_words
+        # there many unreferenced words: among them, we delete only those with no successors except for END
+        not_to_remove = set()
+        for word in to_remove:
+            successors = set(self.model[word]) - { END }
+            if len(successors) != 0:
+                not_to_remove.add(word)
+                not_to_remove.add(self.filter(word))
+        to_remove = to_remove - not_to_remove
+        del not_to_remove
+        # delete lonely words (and temp variables)
+        for word in to_remove:
+            del self.model[word]
+        del to_remove
+
     def filter(self, word):
         if type(word) != type(''):
             return word
@@ -211,7 +244,7 @@ def chat_finder(f):
             chat = Chat()
             CHATS[chat_id] = chat
         chat.last_update = time.time()
-        if int(chat_id) in BLOCKED_CHATS:
+        if chat_id in BLOCKED_CHATS:
             if update.message.text.startswith('/'):
                 bot.send_message(chat_id=chat_id, text="NAK // SCIOPERO")
             return
@@ -295,6 +328,37 @@ def enable_learning(bot, update, chat):
 def disable_learning(bot, update, chat):
     chat.disable_learning()
     bot.send_message(chat_id=update.message.chat_id, text="Learning disabled")
+
+@serializer
+@chat_finder
+def thanos(bot, update, chat, args):
+    try:
+        expected = md5(str(update.message.chat_id).encode()).hexdigest().upper()
+        real = args[0]
+        if real != expected:
+            bot.send_message(chat_id=update.message.chat_id, text="NAK // Send this message to delete half the memory of this chat.")
+            bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
+        else:
+            bot.send_message(chat_id=update.message.chat_id, text="ACK // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. Let's do some cleaning.".format(len(chat.model),
+                                                                                                                                                                                                  len(chat.stickers),
+                                                                                                                                                                                                  len(chat.animations),
+                                                                                                                                                                                                  len(str(chat))))
+            time.sleep(3)
+            bot.send_animation(chat_id=update.message.chat_id, animation='CgACAgIAAxkBAAIJPl7agZWm2Ia02D9UjTJZTdhn1t1MAAKJBgAC1rzZSgPhAUy6TGNDGgQ')            
+            
+            # destroy half the chat
+            chat.halve()
+            # delete isolated words
+            chat.clean()
+            
+            time.sleep(3)
+            bot.send_message(chat_id=update.message.chat_id, text="Now this chat contains {} words, {} stickers and {} gifs for a total size of {} bytes.".format(len(chat.model),
+                                                                                                                                                                  len(chat.stickers),
+                                                                                                                                                                  len(chat.animations),
+                                                                                                                                                                  len(str(chat))))
+    except:
+        bot.send_message(chat_id=update.message.chat_id, text="NAK // Send this message to delete half the memory of this chat.")
+        bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
 
 @serializer
 @chat_finder
@@ -443,6 +507,7 @@ def main():
     dp.add_handler(CommandHandler("torrent?", torrent_question_mark))
     dp.add_handler(CommandHandler("enablelearning", enable_learning))
     dp.add_handler(CommandHandler("disablelearning", disable_learning))
+    dp.add_handler(CommandHandler("thanos", thanos, pass_args=True))
     dp.add_handler(CommandHandler("bof", bof))
     dp.add_handler(CommandHandler("bestoffioriktos", bof))
     dp.add_handler(CommandHandler("gdpr", gdpr))

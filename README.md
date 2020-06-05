@@ -8,6 +8,7 @@ This is a Telegram bot which uses Markov chains to learn how to speak from the m
     torrent - Automatic replies
     enablelearning - Enable learning
     disablelearning - Disable learning
+    thanos - Halve the memory of this chat
     bof - Best of Fioriktos
     gdpr - Privacy stuff
 ```
