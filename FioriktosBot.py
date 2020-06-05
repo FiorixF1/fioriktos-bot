@@ -177,11 +177,11 @@ class Chat:
         for word in self.model:
             length = len(self.model[word])
             if length != 0:
-                self.model[word] = self.model[word][:length//2] + [END]
+                self.model[word] = self.model[word][length//2:] + [END]
         length = len(self.stickers)
-        self.stickers = self.stickers[:length//2]
+        self.stickers = self.stickers[length//2:]
         length = len(self.animations)
-        self.animations = self.animations[:length//2]
+        self.animations = self.animations[length//2:]
 
     def clean(self):
         # find words that are not referenced by any other word: those can be deleted safely
@@ -456,7 +456,7 @@ def jsonify():
     jsonification = dict()
     for chat_id in CHATS:
         jsonification[chat_id] = str(CHATS[chat_id])
-    data = json.dumps(jsonification)
+    data = json.dumps(jsonification, indent=2)
     return data
 
 def unjsonify(data):
