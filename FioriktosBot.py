@@ -1,5 +1,6 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from functools import wraps
+from hashlib import md5
 from os import environ
 import psycopg2
 import logging
@@ -192,7 +193,7 @@ class Chat:
                 referenced_words.add(self.filter(successor))
         to_remove = words - referenced_words
         del words, referenced_words
-        # there many unreferenced words: among them, we delete only those with no successors except for END
+        # there are many unreferenced words: among them, we delete only those with no successors except for END
         not_to_remove = set()
         for word in to_remove:
             successors = set(self.model[word]) - { END }
@@ -201,7 +202,7 @@ class Chat:
                 not_to_remove.add(self.filter(word))
         to_remove = to_remove - not_to_remove
         del not_to_remove
-        # delete lonely words (and temp variables)
+        # delete lonely words
         for word in to_remove:
             del self.model[word]
         del to_remove
