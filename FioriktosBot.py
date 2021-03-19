@@ -34,7 +34,7 @@ ANIMATION = "Animation"
 
 GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\n- Chat ID" + \
-       "\n- Sent messages" + \
+       "\n- Sent words" + \
        "\n- Sent stickers" + \
        "\n- Sent gifs" + \
        "\nI don't store any information about users, such as user ID, username, profile picture..." + \
@@ -343,7 +343,7 @@ def thanos(bot, update, chat, args):
             bot.send_message(chat_id=update.message.chat_id, text="ACK // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. Let's do some cleaning.".format(len(chat.model),
                                                                                                                                                                                                   len(chat.stickers),
                                                                                                                                                                                                   len(chat.animations),
-                                                                                                                                                                                                  len(str(chat))))
+                                                                                                                                                                                                  len(str(chat).encode())))
             time.sleep(6)
             bot.send_animation(chat_id=update.message.chat_id, animation='CgACAgIAAxkBAAIJPl7agZWm2Ia02D9UjTJZTdhn1t1MAAKJBgAC1rzZSgPhAUy6TGNDGgQ')            
             
@@ -356,7 +356,7 @@ def thanos(bot, update, chat, args):
             bot.send_message(chat_id=update.message.chat_id, text="Now this chat contains {} words, {} stickers and {} gifs for a total size of {} bytes.".format(len(chat.model),
                                                                                                                                                                   len(chat.stickers),
                                                                                                                                                                   len(chat.animations),
-                                                                                                                                                                  len(str(chat))))
+                                                                                                                                                                  len(str(chat).encode())))
     except:
         bot.send_message(chat_id=update.message.chat_id, text="NAK // Send this message to delete half the memory of this chat.")
         bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
