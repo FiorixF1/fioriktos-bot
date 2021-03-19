@@ -1,9 +1,10 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from os import environ, getpid
 from functools import wraps
 from hashlib import md5
-from os import environ
 import psycopg2
 import logging
+import psutil
 import random
 import boto3
 import time
@@ -23,6 +24,7 @@ DATABASE_URL = environ.get("DATABASE_URL")
 PORT = int(environ.get("PORT", "8443"))
 AWS_ACCESS_KEY_ID = environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = environ.get("AWS_SECRET_ACCESS_KEY")
+REGION_NAME = environ.get("REGION_NAME")
 S3_BUCKET_NAME = environ.get("S3_BUCKET_NAME")
 
 BEGIN = ""
@@ -263,6 +265,7 @@ def serializer(f):
         if now - LAST_SYNC > 666:  # 37% rule
             store_db()
             delete_old_chats()
+            send_report()
             LAST_SYNC = now
 
     return wrapped
@@ -448,7 +451,7 @@ def load_db():
 
 def store_db():
     data = jsonify()
-    s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+    s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
     s3_client.put_object(Body=data.encode(), Bucket=S3_BUCKET_NAME, Key="dump.txt")
     return data
 
@@ -480,6 +483,16 @@ def delete_old_chats():
     for chat_id in list(CHATS.keys()):
         if now - CHATS[chat_id].last_update > 7776000:
             del CHATS[chat_id]
+
+def send_report():
+    # each day send me automatically a report of used resources so I do not need to check manually on Heroku :)
+    today = datetime.datetime.now()
+    if today.hour == 23 and today.minute >= 50:
+        header = "[DAILY REPORT]"
+        ram_report = f"{psutil.Process(getpid()).memory_info().rss / 1024 ** 2} / 1024 MB used"
+        chats_report = f"{len(CHATS)} chats"
+        telemetry = [header, ram_report, chats_report]
+        bot.send_message(chat_id=FIORIXF1, text="\n".join(telemetry))
 
 def error(bot, update, error):
     """Log Errors caused by Updates."""
