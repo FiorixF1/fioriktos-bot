@@ -18,16 +18,20 @@ logger = logging.getLogger(__name__)
 
 
 
-""" Constants """
-BOT_TOKEN = environ.get("BOT_TOKEN")
-HEROKU_APP_NAME = environ.get("HEROKU_APP_NAME")
-DATABASE_URL = environ.get("DATABASE_URL")
-PORT = int(environ.get("PORT", "8443"))
-AWS_ACCESS_KEY_ID = environ.get("AWS_ACCESS_KEY_ID")
+""" Environment variables """
+BOT_TOKEN             = environ.get("BOT_TOKEN")
+ADMIN                 = int(environ.get("ADMIN"))
+HEROKU_APP_NAME       = environ.get("HEROKU_APP_NAME")
+DATABASE_URL          = environ.get("DATABASE_URL")
+PORT                  = int(environ.get("PORT", "8443"))
+AWS_ACCESS_KEY_ID     = environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = environ.get("AWS_SECRET_ACCESS_KEY")
-REGION_NAME = environ.get("REGION_NAME")
-S3_BUCKET_NAME = environ.get("S3_BUCKET_NAME")
+REGION_NAME           = environ.get("REGION_NAME")
+S3_BUCKET_NAME        = environ.get("S3_BUCKET_NAME")
 
+
+
+""" Constants """
 BEGIN = ""
 END = 0
 ENDING_PUNCTUATION_MARKS = ".!?\n"
@@ -57,9 +61,6 @@ WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact wit
 
 
 """ Global state variables """
-FIORIXF1 = 289439604
-ADMINS = [FIORIXF1]
-ADMINS_USERNAME = { FIORIXF1: "FiorixF1" }
 CHATS = dict()          # key = chat_id --- value = object Chat
 BLOCKED_CHATS = []
 LAST_SYNC = time.time() # for automatic serialization on database
@@ -143,10 +144,10 @@ class Chat:
             new_token = random.choice(self.model[walker])
             # avoid empty messages with non empty model
             if new_token == END and len(answer) == 1 and len(set(self.model[BEGIN])) > 1:
-               while new_token == END:
-                  new_token = random.choice(self.model[BEGIN])
+                while new_token == END:
+                    new_token = random.choice(self.model[BEGIN])
             if new_token == END:
-               break
+                break
             answer.append(new_token)
             walker = new_token
         return ' '.join(answer)
@@ -230,10 +231,10 @@ class Chat:
 def restricted(f):
     @wraps(f)
     def wrapped(bot, update, *args, **kwargs):
-        id = update.effective_user.id
+        user_id = update.effective_user.id
         username = update.effective_user.username
-        if id not in ADMINS:
-            print("Unauthorized access denied for {} ({}).".format(id, username))
+        if user_id != ADMIN:
+            print("Unauthorized access denied for {} ({}).".format(user_id, username))
             return
         f(bot, update, *args, **kwargs)
     return wrapped
@@ -371,7 +372,7 @@ def bof(bot, update, chat):
     if not update.message.photo:
         bot.send_message(chat_id=update.message.chat_id, text="NAK // Send a screenshot with /bof in the description, you could get published on @BestOfFioriktos")
     elif update.message.caption and ("/bof" in update.message.caption or "/bestoffioriktos" in update.message.caption):
-        bot.send_photo(chat_id=FIORIXF1, photo=update.message.photo[-1])
+        bot.send_photo(chat_id=ADMIN, photo=update.message.photo[-1])
         bot.send_message(chat_id=update.message.chat_id, text="ACK")
 
 @serializer
@@ -444,7 +445,7 @@ def deserialize(bot, update):
         print(e)
 
 def load_db():
-    s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+    s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
     dump = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key="dump.txt")
     data = dump['Body'].read()
     unjsonify(data)
@@ -493,7 +494,7 @@ def send_report():
         ram_report = f"{psutil.Process(getpid()).memory_info().rss / 1024 ** 2} / 1024 MB used"
         chats_report = f"{len(CHATS)} chats"
         telemetry = [header, ram_report, chats_report]
-        bot.send_message(chat_id=FIORIXF1, text="\n".join(telemetry))
+        bot.send_message(chat_id=ADMIN, text="\n".join(telemetry))
 
 def error(bot, update, error):
     """Log Errors caused by Updates."""
