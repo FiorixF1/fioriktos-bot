@@ -350,7 +350,7 @@ def thanos(bot, update, chat, args):
                                                                                                                                                                                                   len(chat.animations),
                                                                                                                                                                                                   len(str(chat).encode())))
             time.sleep(6)
-            bot.send_animation(chat_id=update.message.chat_id, animation='CgACAgIAAxkBAAIJPl7agZWm2Ia02D9UjTJZTdhn1t1MAAKJBgAC1rzZSgPhAUy6TGNDGgQ')            
+            bot.send_animation(chat_id=update.message.chat_id, animation=open('thanos.mp4', 'rb'))            
             
             # destroy half the chat
             chat.halve()
