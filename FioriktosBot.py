@@ -424,26 +424,6 @@ def reply(bot, update, chat):
         else:
             bot.send_message(chat_id=update.message.chat_id, text="NAK")
 
-@restricted
-def serialize(bot, update):
-    try:
-        data = store_db()
-        with open("dump.txt", "w") as dump:
-            dump.write(data)
-        bot.send_document(chat_id=update.message.chat_id, document=open("dump.txt", "rb"))
-    except Exception as e:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK // {}".format(e))
-        print(e)
-
-@restricted
-def deserialize(bot, update):
-    try:
-        load_db()
-        bot.send_message(chat_id=update.message.chat_id, text="ACK")
-    except Exception as e:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK // {}".format(e))
-        print(e)
-
 def load_db():
     s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
     dump = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key="dump.txt")
@@ -527,8 +507,6 @@ def main():
     dp.add_handler(CommandHandler("bof", bof))
     dp.add_handler(CommandHandler("bestoffioriktos", bof))
     dp.add_handler(CommandHandler("gdpr", gdpr))
-    dp.add_handler(CommandHandler("serialize", serialize))
-    dp.add_handler(CommandHandler("deserialize", deserialize))
 
     # on noncommand i.e. message
     dp.add_handler(MessageHandler(Filters.text, learn_text_and_reply))

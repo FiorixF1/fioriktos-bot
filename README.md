@@ -13,8 +13,6 @@ This is a Telegram bot which uses Markov chains to learn how to speak from the m
     gdpr - Privacy stuff
 ```
 
-The extra commands ```serialize``` and ```deserialize``` can be issued only by the administrator of the bot: they serialize the bot state into a file or set the bot state from a given file. This makes possible for the administrator to shutdown the bot for maintenance without losing the learnt models or to transfer a model from a group to another one without losing it.
-
 Since this bot has access to private messages of Telegram group users, it has been designed with a high focus on openness and transparency to guarantee that private data are not used in an improper way. The simple act of making the source code public is already a great step towards this goal, a step which has not been made by other bots similar to Fioriktos.
 
 # FAQ
