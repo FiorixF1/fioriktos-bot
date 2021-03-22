@@ -265,8 +265,9 @@ def serializer(f):
 
         now = time.time()
         if now - LAST_SYNC > 666:  # 37% rule
-            store_db()
             delete_old_chats()
+            thanos_big_chats()
+            store_db()
             send_report()
             LAST_SYNC = now
 
@@ -466,15 +467,24 @@ def delete_old_chats():
         if now - CHATS[chat_id].last_update > 7776000:
             del CHATS[chat_id]
 
+def thanos_big_chats():
+    for chat_id in list(CHATS.keys()):
+        if len(CHATS[chat_id].model) > 50000:
+            CHATS[chat_id].halve()
+            CHATS[chat_id].clean()
+
 def send_report():
     # each day send me automatically a report of used resources so I do not need to check manually on Heroku :)
     today = datetime.datetime.now()
-    if today.hour == 23 and today.minute >= 50:
-        header = "[DAILY REPORT]"
-        ram_report = f"{psutil.Process(getpid()).memory_info().rss / 1024 ** 2} / 1024 MB used"
-        chats_report = f"{len(CHATS)} chats"
-        telemetry = [header, ram_report, chats_report]
-        bot.send_message(chat_id=ADMIN, text="\n".join(telemetry))
+    try:
+        if today.hour == 23 and today.minute >= 50:
+            header = "[DAILY REPORT]"
+            ram_report = f"{psutil.Process(getpid()).memory_info().rss / 1024 ** 2} / 1024 MB used"
+            chats_report = f"{len(CHATS)} chats"
+            telemetry = [header, ram_report, chats_report]
+            bot.send_message(chat_id=ADMIN, text="\n".join(telemetry))
+    except Exception as ex:
+        bot.send_message(chat_id=ADMIN, text=str(ex))
 
 def error(bot, update, error):
     """Log Errors caused by Updates."""
