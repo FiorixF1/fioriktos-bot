@@ -35,9 +35,7 @@ The bot is deployed on Heroku and the learnt models are stored on an Amazon S3 b
 
 No. When Fioriktos is removed from a group, the relative data will be automatically deleted after 90 days of inactivity, unless the bot is added to the group again.
 
-In an active chat, you can always delete half the memory of it by using the command ```thanos```.
-
-Currently there is no direct way to delete the whole data of a chat in one shot, however you can achieve the same result by issuing ```thanos``` multiple times or you can ask me directly to remove the data of a chat (check @FiorixF1 on Telegram).
+Recently we added the possibility for the users to inspect their data and remove them completely in one shot. This is done respectively by the special commands ```/gdpr download``` and ```/gdpr delete```. Be careful when using this function: the deletion of your data will happen without asking confirmation and is not reversible, so do it wisely ;)
 
 ## What is assuring me that you won't read my private messages?
 

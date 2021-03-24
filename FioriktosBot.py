@@ -46,7 +46,10 @@ GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\n- Sent gifs" + \
        "\nI don't store any information about users, such as user ID, username, profile picture..." + \
        "\nData are automatically deleted after 90 days of inactivity." + \
-       "\nFor more information, you can visit https://www.github.com/FiorixF1/fioriktos-bot.git or contact my developer @FiorixF1."
+       "\nFurther commands can be used to better control your data:" + \
+       "\n- /gdpr download : Retrieve the data for the current chat on a text file." + \
+       "\n- /gdpr delete : Remove all data for the current chat. NOTE: this operation is irreversible and you will NOT be asked a confirmation!" + \
+       "\nFor more information, visit https://www.github.com/FiorixF1/fioriktos-bot.git or contact my developer @FiorixF1."
 
 WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact with me using the following commands:" + \
           "\n- /fioriktos : Let me generate a message" + \
@@ -396,8 +399,19 @@ def learn_animation_and_reply(bot, update, chat):
 
 @serializer
 @chat_finder
-def gdpr(bot, update, chat):
-    bot.send_message(chat_id=update.message.chat_id, text=GDPR)
+def gdpr(bot, update, chat, args):
+    if len(args) == 0:
+        bot.send_message(chat_id=update.message.chat_id, text=GDPR)
+    else:
+        command = args[0].lower()
+        if command == "download":
+            data = str(chat)
+            with open("dump.txt", "w") as dump:
+                dump.write(data)
+            bot.send_document(chat_id=update.message.chat_id, document=open("dump.txt", "rb"))
+        elif command == "delete":
+            del CHATS[update.message.chat_id]
+            bot.send_message(chat_id=update.message.chat_id, text="ACK")
 
 @serializer
 @chat_finder
@@ -477,7 +491,7 @@ def send_report():
     # each day send me automatically a report of used resources so I do not need to check manually on Heroku :)
     today = datetime.datetime.now()
     try:
-        if today.hour == 23 and today.minute >= 50:
+        if today.hour == 11 and today.minute >= 50:
             header = "[DAILY REPORT]"
             ram_report = f"{psutil.Process(getpid()).memory_info().rss / 1024 ** 2} / 1024 MB used"
             chats_report = f"{len(CHATS)} chats"
@@ -516,7 +530,7 @@ def main():
     dp.add_handler(CommandHandler("thanos", thanos, pass_args=True))
     dp.add_handler(CommandHandler("bof", bof))
     dp.add_handler(CommandHandler("bestoffioriktos", bof))
-    dp.add_handler(CommandHandler("gdpr", gdpr))
+    dp.add_handler(CommandHandler("gdpr", gdpr, pass_args=True))
 
     # on noncommand i.e. message
     dp.add_handler(MessageHandler(Filters.text, learn_text_and_reply))
