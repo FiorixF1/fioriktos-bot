@@ -1,10 +1,11 @@
 # Fioriktos
 
-This is a Telegram bot which uses Markov chains to learn how to speak from the messages of other users. It can answer with text messages, but also stickers and animations. These are the available commands:
+This is a Telegram bot which uses Markov chains to learn how to speak from the messages of other users. It can answer with text messages, but also stickers, animations and audio messages. These are the available commands:
 ```
     fioriktos - Talk
     sticker - Send a sticker
     gif - Send a gif
+    audio - Send an audio
     torrent - Automatic replies
     enablelearning - Enable learning
     disablelearning - Disable learning

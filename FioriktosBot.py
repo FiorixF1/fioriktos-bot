@@ -32,12 +32,13 @@ S3_BUCKET_NAME        = environ.get("S3_BUCKET_NAME")
 
 
 """ Constants """
-BEGIN = ""
-END = 0
+BEGIN                    = ""
+END                      = 0
 ENDING_PUNCTUATION_MARKS = ".!?\n"
-MESSAGE = "Message"
-STICKER = "Sticker"
-ANIMATION = "Animation"
+MESSAGE                  = "Message"
+STICKER                  = "Sticker"
+ANIMATION                = "Animation"
+AUDIO                    = "Audio"
 
 GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\n- Chat ID" + \
@@ -127,14 +128,17 @@ class Chat:
 
     def reply(self):
         if random.random()*10 < self.torrent_level**2/10:
-            if random.random()*10 < 9.5:
+            if random.random()*10 < 9.0:
                 return (MESSAGE, self.talk())
             else:
-                type_of_reply = random.choice([STICKER, ANIMATION])
+                type_of_reply = random.choice([STICKER, ANIMATION, AUDIO])
                 if type_of_reply == STICKER:
                     return (STICKER, self.choose_sticker())
                 elif type_of_reply == ANIMATION:
                     return (ANIMATION, self.choose_animation())
+                elif type_of_reply == AUDIO:
+                    return (AUDIO, self.choose_audio())
+                
         return ""
 
     def talk(self):
@@ -155,6 +159,13 @@ class Chat:
             walker = new_token
         return ' '.join(answer)
 
+    def speech(self):
+        polly_client = boto3.client("polly", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
+        response = polly_client.synthesize_speech(VoiceId="Giorgio", OutputFormat='ogg_vorbis', Text=self.talk())
+        with open("audio.ogg", "wb") as audio:
+            audio.write(response['AudioStream'].read())
+        return "audio.ogg"
+
     def choose_sticker(self):
         try:
             return random.choice(self.stickers)
@@ -164,6 +175,12 @@ class Chat:
     def choose_animation(self):
         try:
             return random.choice(self.animations)
+        except:
+            return ""
+
+    def choose_audio(self):
+        try:
+            return self.speech()
         except:
             return ""
 
@@ -311,6 +328,15 @@ def choose_animation(bot, update, chat):
 
 @serializer
 @chat_finder
+def choose_audio(bot, update, chat):
+    reply = chat.choose_audio()
+    if reply != "":
+        bot.send_audio(chat_id=update.message.chat_id, audio=open(reply, 'rb'))
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty chain")
+
+@serializer
+@chat_finder
 def torrent(bot, update, chat, args):
     try:
         quantity = int(args[0])
@@ -436,6 +462,8 @@ def reply(bot, update, chat):
                 bot.send_sticker(chat_id=update.message.chat_id, sticker=content)
             elif type_of_response == ANIMATION:
                 bot.send_animation(chat_id=update.message.chat_id, animation=content)
+            elif type_of_response == AUDIO:
+                bot.send_audio(chat_id=update.message.chat_id, audio=open(content, 'rb'))
         else:
             bot.send_message(chat_id=update.message.chat_id, text="NAK")
 
@@ -523,6 +551,7 @@ def main():
     dp.add_handler(CommandHandler("fioriktos", fioriktos))
     dp.add_handler(CommandHandler("sticker", choose_sticker))
     dp.add_handler(CommandHandler("gif", choose_animation))
+    dp.add_handler(CommandHandler("audio", choose_audio))
     dp.add_handler(CommandHandler("torrent", torrent, pass_args=True))
     dp.add_handler(CommandHandler("torrent?", torrent_question_mark))
     dp.add_handler(CommandHandler("enablelearning", enable_learning))
