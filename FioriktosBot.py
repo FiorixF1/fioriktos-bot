@@ -2,6 +2,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from os import environ, getpid
 from functools import wraps
 from hashlib import md5
+import langdetect
 import datetime
 import psycopg2
 import logging
@@ -40,6 +41,43 @@ STICKER                  = "Sticker"
 ANIMATION                = "Animation"
 AUDIO                    = "Audio"
 
+LANG_TO_VOICE = {
+    'af':    'Ruben',    # redirect Afrikaans to Dutch
+    'ar':    'Zeina',
+    'bg':    'Maxim',    # redirect Bulgarian to Russian
+    'ca':    'Miguel',   # redirect Catalan to Spanish
+    'cs':    'Maxim',    # redirect Czech to Russian
+    'cy':    'Gwyneth',
+    'da':    'Mads',
+    'de':    'Hans',
+    'en':    'Joey',
+    'es':    'Miguel',
+    'fa':    'Zeina',    # redirect Farsi to Arabic
+    'fr':    'Mathieu',
+    'hi':    'Aditi',
+    'hr':    'Maxim',    # redirect Croatian to Russian
+    'is':    'Karl',
+    'it':    'Giorgio',
+    'ja':    'Takumi',
+    'ko':    'Seoyeon',
+    'mk':    'Maxim',    # redirect Macedonian to Russian
+    'mr':    'Aditi',    # redirect Marathi to Hindi
+    'ne':    'Aditi',    # redirect Nepali to Hindi
+    'nl':    'Ruben',
+    'no':    'Liv',
+    'pl':    'Jacek',
+    'pt':    'Ricardo',
+    'ro':    'Carmen',
+    'ru':    'Maxim',
+    'sl':    'Maxim',    # redirect Slovene to Russian
+    'sk':    'Maxim',    # redirect Slovak to Russian
+    'sv':    'Astrid',
+    'tr':    'Filiz',
+    'uk':    'Maxim',    # redirect Ukrainian to Russian
+    'zh-cn': 'Zhiyu',
+    'zh-tw': 'Zhiyu'
+}
+
 GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\n- Chat ID" + \
        "\n- Sent words" + \
@@ -56,6 +94,7 @@ WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact wit
           "\n- /fioriktos : Let me generate a message" + \
           "\n- /sticker : Let me send a sticker" + \
           "\n- /gif : Let me send a gif" + \
+          "\n- /audio : Let me send an audio" + \
           "\n- /torrent n : Let me reply automatically to messages sent by others. The parameter n sets how much talkative I am and it must be a number between 0 and 10: with /torrent 10 I will answer all messages, while /torrent 0 will mute me. If you want to know my current parameter, send /torrent?" + \
           "\n- You can enable or disable my learning ability with the commands /enablelearning and /disablelearning" + \
           "\n- /thanos : This command will delete half the memory of the chat. Use it wisely!" + \
@@ -138,7 +177,6 @@ class Chat:
                     return (ANIMATION, self.choose_animation())
                 elif type_of_reply == AUDIO:
                     return (AUDIO, self.choose_audio())
-                
         return ""
 
     def talk(self):
@@ -160,8 +198,21 @@ class Chat:
         return ' '.join(answer)
 
     def speech(self):
+        text = self.talk()
+        
+        try:
+            candidates = langdetect.detect_langs(text)
+            winner = random.choice(candidates).lang
+            voice = LANG_TO_VOICE[winner]
+        except:
+            # language detection unsuccessful or unsupported language
+            # fallback to Italian
+            voice = LANG_TO_VOICE['it']
+
         polly_client = boto3.client("polly", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
-        response = polly_client.synthesize_speech(VoiceId="Giorgio", OutputFormat='ogg_vorbis', Text=self.talk())
+        response = polly_client.synthesize_speech(VoiceId=voice,
+                                                  OutputFormat='ogg_vorbis',
+                                                  Text=text)
         with open("audio.ogg", "wb") as audio:
             audio.write(response['AudioStream'].read())
         return "audio.ogg"
@@ -298,6 +349,9 @@ def serializer(f):
 """ Commands """
 def start(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text="SYN")
+
+def help(bot, update):
+    bot.send_message(chat_id=update.message.chat_id, text=WELCOME)
 
 @serializer
 @chat_finder
@@ -548,6 +602,7 @@ def main():
 
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("help", help))
     dp.add_handler(CommandHandler("fioriktos", fioriktos))
     dp.add_handler(CommandHandler("sticker", choose_sticker))
     dp.add_handler(CommandHandler("gif", choose_animation))
