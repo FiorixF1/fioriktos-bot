@@ -98,7 +98,7 @@ WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact wit
           "\n- /torrent n : Let me reply automatically to messages sent by others. The parameter n sets how much talkative I am and it must be a number between 0 and 10: with /torrent 10 I will answer all messages, while /torrent 0 will mute me. If you want to know my current parameter, send /torrent?" + \
           "\n- You can enable or disable my learning ability with the commands /enablelearning and /disablelearning" + \
           "\n- /thanos : This command will delete half the memory of the chat. Use it wisely!" + \
-          "\n- /bof : If I say something funny, you can make a screenshot and send it with this command in the description. Your screenshot could get published on @BestOfFioriktos" + \
+          "\n- /bof : If I say something funny, you can make a screenshot and send it with this command in the description. Your screenshot could get published on @BestOfFioriktos. In case of an audio message, just reply to it with /bof" + \
           "\n- /gdpr : Here you can have more info about privacy and visit my source code 💻"
 
 
@@ -453,8 +453,11 @@ def thanos(bot, update, chat, args):
 @serializer
 @chat_finder
 def bof(bot, update, chat):
-    if not update.message.photo:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK // Send a screenshot with /bof in the description, you could get published on @BestOfFioriktos")
+    if update.message.reply_to_message and update.message.reply_to_message.audio:
+        bot.send_audio(chat_id=ADMIN, audio=update.message.reply_to_message.audio)
+        bot.send_message(chat_id=update.message.chat_id, text="ACK")
+    elif not update.message.photo:
+        bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to an audio message with /bof or send a screenshot with /bof in the description, you could get published on @BestOfFioriktos")
     elif update.message.caption and ("/bof" in update.message.caption or "/bestoffioriktos" in update.message.caption):
         bot.send_photo(chat_id=ADMIN, photo=update.message.photo[-1])
         bot.send_message(chat_id=update.message.chat_id, text="ACK")
