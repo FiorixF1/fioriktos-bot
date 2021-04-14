@@ -1,7 +1,7 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from os import environ, getpid
 from functools import wraps
 from hashlib import md5
+from os import environ
 import langdetect
 import datetime
 import psycopg2
@@ -339,7 +339,6 @@ def serializer(f):
             delete_old_chats()
             thanos_big_chats()
             store_db()
-            send_report()
             LAST_SYNC = now
 
     return wrapped
@@ -575,19 +574,6 @@ def thanos_big_chats():
             CHATS[chat_id].halve()
             CHATS[chat_id].clean()
 
-def send_report():
-    # each day send me automatically a report of used resources so I do not need to check manually on Heroku :)
-    today = datetime.datetime.now()
-    try:
-        if today.hour == 11 and today.minute >= 50:
-            header = "[DAILY REPORT]"
-            ram_report = f"{psutil.Process(getpid()).memory_info().rss / 1024 ** 2} / 1024 MB used"
-            chats_report = f"{len(CHATS)} chats"
-            telemetry = [header, ram_report, chats_report]
-            bot.send_message(chat_id=ADMIN, text="\n".join(telemetry))
-    except Exception as ex:
-        bot.send_message(chat_id=ADMIN, text=str(ex))
-
 def error(bot, update, error):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, error)
@@ -643,7 +629,10 @@ def main():
     updater.start_webhook(listen="0.0.0.0",
                           port=PORT,
                           url_path=BOT_TOKEN)
-    updater.bot.set_webhook("https://{}.herokuapp.com/{}".format(HEROKU_APP_NAME, BOT_TOKEN))
+    updater.bot.set_webhook(url="https://{}.herokuapp.com/{}".format(HEROKU_APP_NAME, BOT_TOKEN),
+                            max_connections=100,
+                            allowed_updates=["message", "channel_post", "my_chat_member"],
+                            drop_pending_updates=True)
 
 if __name__ == '__main__':
     main()
