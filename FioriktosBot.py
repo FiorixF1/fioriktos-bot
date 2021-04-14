@@ -571,7 +571,7 @@ def delete_old_chats():
 
 def thanos_big_chats():
     for chat_id in list(CHATS.keys()):
-        if len(CHATS[chat_id].model) > 50000:
+        if len(CHATS[chat_id].model) > 25000:
             CHATS[chat_id].halve()
             CHATS[chat_id].clean()
 
