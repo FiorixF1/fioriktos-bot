@@ -568,7 +568,7 @@ def load_db():
 
     # create directory in local storage or everything will break :)
     try:
-        os.mkdir(PREFIX)
+        mkdir(PREFIX)
     except:
         pass
 
