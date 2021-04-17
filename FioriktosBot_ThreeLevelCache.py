@@ -299,7 +299,8 @@ class Chat:
                          "is_learning": self.is_learning,
                          "model": self.model,
                          "stickers": self.stickers,
-                         "animations": self.animations}
+                         "animations": self.animations,
+                         "last_update": self.last_update}
         return json.dumps(jsonification)
 
 
@@ -608,6 +609,7 @@ def unjsonify(data):
     deserialized_chat.model = jsonized_chat["model"]
     deserialized_chat.stickers = jsonized_chat["stickers"]
     deserialized_chat.animations = jsonized_chat["animations"]
+    deserialized_chat.last_update = jsonized_chat["last_update"]
 
     return deserialized_chat
 
