@@ -211,8 +211,9 @@ class Chat:
             candidates = langdetect.detect_langs(text)
             winner = random.choice(candidates).lang
             voice = LANG_TO_VOICE[winner]
-        except:
+        except Exception as e:
             # language detection unsuccessful or unsupported language
+            logger.error("Exception occurred: {}".format(e))
             # fallback to Italian
             voice = LANG_TO_VOICE['it']
 
@@ -312,7 +313,7 @@ def restricted(f):
         user_id = update.effective_user.id
         username = update.effective_user.username
         if user_id != ADMIN:
-            print("Unauthorized access denied for {} ({}).".format(user_id, username))
+            logger.error("Unauthorized access denied for {} ({}).".format(user_id, username))
             return
         f(bot, update, *args, **kwargs)
     return wrapped
@@ -347,7 +348,7 @@ def chat_finder(f):
             CHATS[chat_id] = chat 
         chat.last_update = time.time()
 
-        print("RAM: {} - DISK: {} - NETWORK: {}".format(len(CHATS), len(DISK_CHATS), len(NETWORK_CHATS)))
+        logger.info("RAM: {} - DISK: {} - NETWORK: {}".format(len(CHATS), len(DISK_CHATS), len(NETWORK_CHATS)))
 
         f(bot, update, chat, *args, **kwargs)
     return wrapped
@@ -549,23 +550,25 @@ def reply(bot, update, chat):
                 bot.send_animation(chat_id=update.message.chat_id, animation=content)
             elif type_of_response == AUDIO:
                 bot.send_audio(chat_id=update.message.chat_id, audio=open(content, 'rb'))
-        else:
-            bot.send_message(chat_id=update.message.chat_id, text="NAK")
 
 
 
 """ Utility functions """
 def load_db():
-    s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
-    chats_aws = s3_client.list_objects(Bucket=S3_BUCKET_NAME, Prefix=PREFIX)["Contents"][1:]    
-    
-    now = time.time()
-    for chat_aws in chats_aws:
-        if now - chat_aws["LastModified"].timestamp() > 7776000:
-            # no need to remove from local storage: in Heroku it is freed at boot
-            s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=chat_aws["Key"])
-        else:
-            NETWORK_CHATS.add(chat_aws["Key"])
+    try:
+        s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
+        chats_aws = s3_client.list_objects(Bucket=S3_BUCKET_NAME, Prefix=PREFIX)["Contents"][1:]    
+        
+        now = time.time()
+        for chat_aws in chats_aws:
+            if now - chat_aws["LastModified"].timestamp() > 7776000:
+                # no need to remove from local storage: in Heroku it is freed at boot
+                s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=chat_aws["Key"])
+            else:
+                NETWORK_CHATS.add(chat_aws["Key"])
+    except Exception as e:
+        # cold start: 'chats/' does not exist yet
+        logger.error("Exception occurred: {}".format(e))
 
     # create directory in local storage or everything will break :)
     try:

@@ -204,8 +204,9 @@ class Chat:
             candidates = langdetect.detect_langs(text)
             winner = random.choice(candidates).lang
             voice = LANG_TO_VOICE[winner]
-        except:
+        except Exception as e:
             # language detection unsuccessful or unsupported language
+            logger.error("Exception occurred: {}".format(e))
             # fallback to Italian
             voice = LANG_TO_VOICE['it']
 
@@ -305,7 +306,7 @@ def restricted(f):
         user_id = update.effective_user.id
         username = update.effective_user.username
         if user_id != ADMIN:
-            print("Unauthorized access denied for {} ({}).".format(user_id, username))
+            logger.error("Unauthorized access denied for {} ({}).".format(user_id, username))
             return
         f(bot, update, *args, **kwargs)
     return wrapped
@@ -526,14 +527,20 @@ def reply(bot, update, chat):
                 bot.send_animation(chat_id=update.message.chat_id, animation=content)
             elif type_of_response == AUDIO:
                 bot.send_audio(chat_id=update.message.chat_id, audio=open(content, 'rb'))
-        else:
-            bot.send_message(chat_id=update.message.chat_id, text="NAK")
 
+
+
+""" Utility functions """
 def load_db():
-    s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
-    dump = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key="dump.txt")
-    data = dump['Body'].read()
-    unjsonify(data)
+    try:
+        s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
+        dump = s3_client.get_object(Bucket=S3_BUCKET_NAME, Key="dump.txt")
+        data = dump['Body'].read()
+        unjsonify(data)
+    except Exception as e:
+        # cold start: 'dump.txt' does not exist yet
+        logger.error("Exception occurred: {}".format(e))
+        data = '{}'
     return data
 
 def store_db():
