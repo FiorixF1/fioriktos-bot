@@ -212,11 +212,11 @@ class Chat:
 
         polly_client = boto3.client("polly", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
         response = polly_client.synthesize_speech(VoiceId=voice,
-                                                  OutputFormat='ogg_vorbis',
+                                                  OutputFormat='mp3',
                                                   Text=text)
-        with open("audio.ogg", "wb") as audio:
+        with open("audio.mp3", "wb") as audio:
             audio.write(response['AudioStream'].read())
-        return "audio.ogg"
+        return "audio.mp3"
 
     def choose_sticker(self):
         try:
@@ -388,7 +388,7 @@ def choose_animation(bot, update, chat):
 def choose_audio(bot, update, chat):
     reply = chat.choose_audio()
     if reply != "":
-        bot.send_audio(chat_id=update.message.chat_id, audio=open(reply, 'rb'))
+        bot.send_voice(chat_id=update.message.chat_id, voice=open(reply, 'rb'))
     else:
         bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty chain")
 
@@ -526,7 +526,7 @@ def reply(bot, update, chat):
             elif type_of_response == ANIMATION:
                 bot.send_animation(chat_id=update.message.chat_id, animation=content)
             elif type_of_response == AUDIO:
-                bot.send_audio(chat_id=update.message.chat_id, audio=open(content, 'rb'))
+                bot.send_voice(chat_id=update.message.chat_id, voice=open(content, 'rb'))
 
 
 
