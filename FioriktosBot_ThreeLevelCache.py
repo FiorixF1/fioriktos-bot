@@ -538,9 +538,12 @@ def gdpr(bot, update, chat, args):
             bot.send_document(chat_id=update.message.chat_id, document=open("dump.txt", "rb"))
         elif command == "delete":
             # no need to remove from local storage: in Heroku it is freed at boot
-            s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
-            s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=TO_KEY(update.message.chat_id))
-            NETWORK_CHATS.remove(TO_KEY(update.message.chat_id))
+            chat_key = TO_KEY(update.message.chat_id)
+            if chat_key in NETWORK_CHATS:
+                # if the chat has been created recently, it may not be on S3
+                s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
+                s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=TO_KEY(update.message.chat_id))
+                NETWORK_CHATS.remove(TO_KEY(update.message.chat_id))
             # remove from RAM
             del CHATS[update.message.chat_id]
             bot.send_message(chat_id=update.message.chat_id, text="ACK")
