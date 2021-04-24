@@ -287,14 +287,14 @@ class Chat:
             del self.model[word]
         del to_remove
 
-    def flag(item):
+    def flag(self, item):
         while item in self.stickers:
             self.stickers.remove(item)
         while item in self.animations:
             self.animations.remove(item)
         self.flagged_media.add(item)
 
-    def unflag(item):
+    def unflag(self, item):
         if item in self.flagged_media:
             self.flagged_media.remove(item)
 
