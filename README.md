@@ -36,7 +36,7 @@ The bot is deployed on Heroku and the learnt models are stored on an Amazon S3 b
 
 No. When Fioriktos is removed from a group, the relative data will be automatically deleted after 90 days of inactivity, unless the bot is added to the group again.
 
-Recently we added the possibility for the users to inspect their data and remove them completely in one shot. This is done respectively by the special commands ```/gdpr download``` and ```/gdpr delete```. Be careful when using this function: the deletion of your data will happen without asking confirmation and is not reversible, so do it wisely ;)
+Recently we added the possibility for the users to inspect their data and remove them completely in one shot. This is done respectively by the special commands ```/gdpr download``` and ```/gdpr delete```. Be careful when using this function: the deletion of your data will happen without asking confirmation and is not reversible, so do it wisely. It is also possible to remove a specific sticker or gif from Fioriktos' memory: let's say some troll publishes a porn gif in your group. Instead of deleting it, reply to it with ```/gdpr flag```, this way the gif will be removed from the bot's memory and Fioriktos won't publish it again later. If the bot has administrator rights, it will also care about deleting the message from group history.
 
 ## What is assuring me that you won't read my private messages?
 

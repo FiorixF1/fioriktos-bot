@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 """ Environment variables """
 BOT_TOKEN             = environ.get("BOT_TOKEN")
+BOT_ID                = int(BOT_TOKEN[:BOT_TOKEN.find(':')])
 ADMIN                 = int(environ.get("ADMIN"))
 HEROKU_APP_NAME       = environ.get("HEROKU_APP_NAME")
 DATABASE_URL          = environ.get("DATABASE_URL")
@@ -91,6 +92,7 @@ GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\nFurther commands can be used to better control your data:" + \
        "\n- /gdpr download : Retrieve the data for the current chat on a text file." + \
        "\n- /gdpr delete : Remove all data for the current chat. NOTE: this operation is irreversible and you will NOT be asked a confirmation!" + \
+       "\n- /gdpr flag : Reply to a sticker or a gif with this command to remove it from my memory. This is useful to prevent me from spamming inappropriate content." + \
        "\nFor more information, visit https://www.github.com/FiorixF1/fioriktos-bot.git or contact my developer @FiorixF1."
 
 WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact with me using the following commands:" + \
@@ -102,7 +104,7 @@ WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact wit
           "\n- You can enable or disable my learning ability with the commands /enablelearning and /disablelearning" + \
           "\n- /thanos : This command will delete half the memory of the chat. Use it wisely!" + \
           "\n- /bof : If I say something funny, you can make a screenshot and send it with this command in the description. Your screenshot could get published on @BestOfFioriktos. In case of an audio message, just reply to it with /bof" + \
-          "\n- /gdpr : Here you can have more info about privacy and visit my source code 💻"
+          "\n- /gdpr : Here you can have more info about privacy, special commands and visit my source code 💻"
 
 
 
@@ -313,7 +315,7 @@ def restricted(f):
         user_id = update.effective_user.id
         username = update.effective_user.username
         if user_id != ADMIN:
-            logger.error("Unauthorized access denied for {} ({}).".format(user_id, username))
+            logger.warning("Unauthorized access denied for {} ({}).".format(user_id, username))
             return
         f(bot, update, *args, **kwargs)
     return wrapped
@@ -510,6 +512,7 @@ def learn_animation_and_reply(bot, update, chat):
 @serializer
 @chat_finder
 def gdpr(bot, update, chat, args):
+    # this code is a bit messed up
     if len(args) == 0:
         bot.send_message(chat_id=update.message.chat_id, text=GDPR)
     else:
@@ -524,6 +527,30 @@ def gdpr(bot, update, chat, args):
             s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=TO_KEY(update.message.chat_id))
             del CHATS[update.message.chat_id]
             bot.send_message(chat_id=update.message.chat_id, text="ACK")
+        elif command == "flag":
+            if update.message.reply_to_message:
+                if update.message.reply_to_message.sticker:
+                    flagged = update.message.reply_to_message.sticker.file_id
+                    while flagged in chat.stickers:
+                        chat.stickers.remove(flagged)
+                    myself = bot.getChatMember(update.message.chat_id, BOT_ID)
+                    if myself["status"] == "administrator" and myself["can_delete_messages"]:
+                        bot.delete_message(update.message.chat_id, update.message.reply_to_message.message_id)
+                    bot.send_message(chat_id=update.message.chat_id, text="ACK")
+                elif update.message.reply_to_message.animation:
+                    flagged = update.message.reply_to_message.animation.file_id
+                    while flagged in chat.animations:
+                        chat.animations.remove(flagged)
+                    myself = bot.getChatMember(update.message.chat_id, BOT_ID)
+                    if myself["status"] == "administrator" and myself["can_delete_messages"]:
+                        bot.delete_message(update.message.chat_id, update.message.reply_to_message.message_id)
+                    bot.send_message(chat_id=update.message.chat_id, text="ACK")
+                else:
+                    bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
+            else:
+                bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
+        else:
+            bot.send_message(chat_id=update.message.chat_id, text="NAK // Undefined command after /gdpr")
 
 @serializer
 @chat_finder
