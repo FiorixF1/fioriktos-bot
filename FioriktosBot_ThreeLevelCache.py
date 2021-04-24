@@ -93,6 +93,7 @@ GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\n- /gdpr download : Retrieve the data for the current chat on a text file." + \
        "\n- /gdpr delete : Remove all data for the current chat. NOTE: this operation is irreversible and you will NOT be asked a confirmation!" + \
        "\n- /gdpr flag : Reply to a sticker or a gif with this command to remove it from my memory. This is useful to prevent me from spamming inappropriate content." + \
+       "\n- /gdpr unflag : Allow me to learn a sticker or gif that was previously flagged." + \
        "\nFor more information, visit https://www.github.com/FiorixF1/fioriktos-bot.git or contact my developer @FiorixF1."
 
 WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact with me using the following commands:" + \
@@ -126,6 +127,7 @@ class Chat:
         self.model         = { BEGIN: [END] }
         self.stickers      = []
         self.animations    = []
+        self.flagged_media = set()
         self.last_update   = time.time()
         self.dirty_bit     = 1
 
@@ -157,7 +159,7 @@ class Chat:
                         self.model[token][guess] = successor
 
     def learn_sticker(self, sticker):
-        if self.is_learning:
+        if self.is_learning and sticker not in self.flagged_media:
             if len(self.stickers) < 1024:
                 self.stickers.append(sticker)
             else:
@@ -165,7 +167,7 @@ class Chat:
                 self.stickers[guess] = sticker
 
     def learn_animation(self, animation):
-        if self.is_learning:
+        if self.is_learning and animation not in self.flagged_media:
             if len(self.animations) < 1024:
                 self.animations.append(animation)
             else:
@@ -292,6 +294,17 @@ class Chat:
             del self.model[word]
         del to_remove
 
+    def flag(item):
+        while item in self.stickers:
+            self.stickers.remove(item)
+        while item in self.animations:
+            self.animations.remove(item)
+        self.flagged_media.add(item)
+
+    def unflag(item):
+        if item in self.flagged_media:
+            self.flagged_media.remove(item)
+
     def filter(self, word):
         if type(word) != type(''):
             return word
@@ -303,6 +316,7 @@ class Chat:
                          "model": self.model,
                          "stickers": self.stickers,
                          "animations": self.animations,
+                         "flagged_media": list(self.flagged_media),
                          "last_update": self.last_update}
         return json.dumps(jsonification)
 
@@ -529,26 +543,40 @@ def gdpr(bot, update, chat, args):
             bot.send_message(chat_id=update.message.chat_id, text="ACK")
         elif command == "flag":
             if update.message.reply_to_message:
+                # identify item
                 if update.message.reply_to_message.sticker:
-                    flagged = update.message.reply_to_message.sticker.file_id
-                    while flagged in chat.stickers:
-                        chat.stickers.remove(flagged)
-                    myself = bot.getChatMember(update.message.chat_id, BOT_ID)
-                    if myself["status"] == "administrator" and myself["can_delete_messages"]:
-                        bot.delete_message(update.message.chat_id, update.message.reply_to_message.message_id)
-                    bot.send_message(chat_id=update.message.chat_id, text="ACK")
+                    item = update.message.reply_to_message.sticker.file_id
                 elif update.message.reply_to_message.animation:
-                    flagged = update.message.reply_to_message.animation.file_id
-                    while flagged in chat.animations:
-                        chat.animations.remove(flagged)
-                    myself = bot.getChatMember(update.message.chat_id, BOT_ID)
-                    if myself["status"] == "administrator" and myself["can_delete_messages"]:
-                        bot.delete_message(update.message.chat_id, update.message.reply_to_message.message_id)
-                    bot.send_message(chat_id=update.message.chat_id, text="ACK")
+                    item = update.message.reply_to_message.animation.file_id
                 else:
                     bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
+                    return
+                # remove from bot memory
+                chat.flag(item)
+                # remove from chat history (if admin)
+                myself = bot.getChatMember(update.message.chat_id, BOT_ID)
+                if myself["status"] == "administrator" and myself["can_delete_messages"]:
+                    bot.delete_message(update.message.chat_id, update.message.reply_to_message.message_id)
+                # done
+                bot.send_message(chat_id=update.message.chat_id, text="ACK")
             else:
                 bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
+        elif command == "unflag":
+            if update.message.reply_to_message:
+                # identify item
+                if update.message.reply_to_message.sticker:
+                    item = update.message.reply_to_message.sticker.file_id
+                elif update.message.reply_to_message.animation:
+                    item = update.message.reply_to_message.animation.file_id
+                else:
+                    bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
+                    return
+                # update bot memory
+                chat.unflag(item)
+                # done
+                bot.send_message(chat_id=update.message.chat_id, text="ACK")
+            else:
+                bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
         else:
             bot.send_message(chat_id=update.message.chat_id, text="NAK // Undefined command after /gdpr")
 
@@ -634,12 +662,13 @@ def unjsonify(data):
     jsonized_chat = json.loads(data)
 
     deserialized_chat = Chat()
-    deserialized_chat.torrent_level = jsonized_chat["torrent_level"]
-    deserialized_chat.is_learning = jsonized_chat["is_learning"]
-    deserialized_chat.model = jsonized_chat["model"]
-    deserialized_chat.stickers = jsonized_chat["stickers"]
-    deserialized_chat.animations = jsonized_chat["animations"]
-    deserialized_chat.last_update = jsonized_chat["last_update"]
+    deserialized_chat.torrent_level = jsonized_chat.get("torrent_level", 5)
+    deserialized_chat.is_learning = jsonized_chat.get("is_learning", True)
+    deserialized_chat.model = jsonized_chat.get("model", { BEGIN: [END] })
+    deserialized_chat.stickers = jsonized_chat.get("stickers", [])
+    deserialized_chat.animations = jsonized_chat.get("animations", [])
+    deserialized_chat.flagged_media = set(jsonized_chat.get("flagged_media", []))
+    deserialized_chat.last_update = jsonized_chat.get("last_update", time.time())
 
     return deserialized_chat
 
