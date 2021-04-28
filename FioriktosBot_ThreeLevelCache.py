@@ -734,7 +734,10 @@ def main():
 
     updater.start_webhook(listen="0.0.0.0",
                           port=PORT,
-                          url_path=BOT_TOKEN)
+                          url_path=BOT_TOKEN,
+                          webhook_url="https://{}.herokuapp.com/{}".format(HEROKU_APP_NAME, BOT_TOKEN),
+                          allowed_updates=["message", "channel_post", "my_chat_member"],
+                          drop_pending_updates=True)
     updater.bot.set_webhook(url="https://{}.herokuapp.com/{}".format(HEROKU_APP_NAME, BOT_TOKEN),
                             max_connections=100,
                             allowed_updates=["message", "channel_post", "my_chat_member"],
