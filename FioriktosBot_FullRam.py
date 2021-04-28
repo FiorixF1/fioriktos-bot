@@ -4,7 +4,6 @@ from hashlib import md5
 from os import environ
 import langdetect
 import datetime
-import psycopg2
 import logging
 import psutil
 import random
@@ -98,7 +97,7 @@ WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact wit
           "\n- /sticker : Let me send a sticker" + \
           "\n- /gif : Let me send a gif" + \
           "\n- /audio : Let me send an audio" + \
-          "\n- /torrent n : Let me reply automatically to messages sent by others. The parameter n sets how much talkative I am and it must be a number between 0 and 10: with /torrent 10 I will answer all messages, while /torrent 0 will mute me. If you want to know my current parameter, send /torrent?" + \
+          "\n- /torrent n : Let me reply automatically to messages sent by others. The parameter n sets how much talkative I am and it must be a number between 0 and 10: with /torrent 10 I will answer all messages, while /torrent 0 will mute me." + \
           "\n- You can enable or disable my learning ability with the commands /enablelearning and /disablelearning" + \
           "\n- /thanos : This command will delete half the memory of the chat. Use it wisely!" + \
           "\n- /bof : If I say something funny, you can make a screenshot and send it with this command in the description. Your screenshot could get published on @BestOfFioriktos. In case of an audio message, just reply to it with /bof" + \
@@ -318,23 +317,23 @@ class Chat:
 """ Decorators """
 def restricted(f):
     @wraps(f)
-    def wrapped(bot, update, *args, **kwargs):
+    def wrapped(update, context, *args, **kwargs):
         user_id = update.effective_user.id
         username = update.effective_user.username
         if user_id != ADMIN:
             logger.warning("Unauthorized access denied for {} ({}).".format(user_id, username))
             return
-        f(bot, update, *args, **kwargs)
+        f(update, context, *args, **kwargs)
     return wrapped
 
 def chat_finder(f):
     @wraps(f)
-    def wrapped(bot, update, *args, **kwargs):
+    def wrapped(update, context, *args, **kwargs):
         chat_id = update.message.chat_id
 
         if chat_id in BLOCKED_CHATS:
             if update.message.text.startswith('/'):
-                bot.send_message(chat_id=chat_id, text="NAK // SCIOPERO")
+                context.bot.send_message(chat_id=chat_id, text="NAK // SCIOPERO")
             return
 
         try:
@@ -344,15 +343,15 @@ def chat_finder(f):
             CHATS[chat_id] = chat
         chat.last_update = time.time()
         
-        f(bot, update, chat, *args, **kwargs)
+        f(update, context, chat, *args, **kwargs)
     return wrapped
 
 def serializer(f):
     @wraps(f)
-    def wrapped(bot, update, *args, **kwargs):
+    def wrapped(update, context, *args, **kwargs):
         global LAST_SYNC
 
-        f(bot, update, *args, **kwargs)
+        f(update, context, *args, **kwargs)
 
         now = time.time()
         if now - LAST_SYNC > 666:  # 37% rule
@@ -366,94 +365,92 @@ def serializer(f):
 
 
 """ Commands """
-def start(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text="SYN")
+def start(update, context):
+    context.bot.send_message(chat_id=update.message.chat_id, text="SYN")
 
-def help(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text=WELCOME)
+def help(update, context):
+    context.bot.send_message(chat_id=update.message.chat_id, text=WELCOME)
 
 @serializer
 @chat_finder
-def fioriktos(bot, update, chat):
+def fioriktos(update, context, chat):
     reply = chat.talk()
     if reply != "":
-        bot.send_message(chat_id=update.message.chat_id, text=reply)
+        context.bot.send_message(chat_id=update.message.chat_id, text=reply)
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty chain")
+        context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty chain")
 
 @serializer
 @chat_finder
-def choose_sticker(bot, update, chat):
+def choose_sticker(update, context, chat):
     reply = chat.choose_sticker()
     if reply != "":
-        bot.send_sticker(chat_id=update.message.chat_id, sticker=reply)
+        context.bot.send_sticker(chat_id=update.message.chat_id, sticker=reply)
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty sticker set")
+        context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty sticker set")
 
 @serializer
 @chat_finder
-def choose_animation(bot, update, chat):
+def choose_animation(update, context, chat):
     reply = chat.choose_animation()
     if reply != "":
-        bot.send_animation(chat_id=update.message.chat_id, animation=reply)
+        context.bot.send_animation(chat_id=update.message.chat_id, animation=reply)
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty gif set")
+        context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty gif set")
 
 @serializer
 @chat_finder
-def choose_audio(bot, update, chat):
+def choose_audio(update, context, chat):
     reply = chat.choose_audio()
     if reply != "":
-        bot.send_voice(chat_id=update.message.chat_id, voice=open(reply, 'rb'))
+        context.bot.send_voice(chat_id=update.message.chat_id, voice=open(reply, 'rb'))
     else:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty chain")
+        context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Empty chain")
 
 @serializer
 @chat_finder
-def torrent(bot, update, chat, args):
-    try:
-        quantity = int(args[0])
-        if quantity < 0 or quantity > 10:
-            bot.send_message(chat_id=update.message.chat_id, text="NAK // Send /torrent with a number between 0 and 10.")
-        else:
-            chat.set_torrent(quantity)
-            bot.send_message(chat_id=update.message.chat_id, text="ACK")
-    except:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK // Send /torrent with a number between 0 and 10.")
+def torrent(update, context, chat):
+    if len(context.args) == 0:
+        context.bot.send_message(chat_id=update.message.chat_id, text="Torrent level is {}\n\nChange with /torrent followed by a number between 0 and 10.".format(chat.get_torrent()))
+    else:
+        try:
+            quantity = int(context.args[0])
+            if quantity < 0 or quantity > 10:
+                context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Send /torrent with a number between 0 and 10.")
+            else:
+                chat.set_torrent(quantity)
+                context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
+        except:
+            context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Send /torrent with a number between 0 and 10.")
 
 @serializer
 @chat_finder
-def torrent_question_mark(bot, update, chat):
-    bot.send_message(chat_id=update.message.chat_id, text=str(chat.get_torrent()))
-
-@serializer
-@chat_finder
-def enable_learning(bot, update, chat):
+def enable_learning(update, context, chat):
     chat.enable_learning()
-    bot.send_message(chat_id=update.message.chat_id, text="Learning enabled")
+    context.bot.send_message(chat_id=update.message.chat_id, text="Learning enabled")
 
 @serializer
 @chat_finder
-def disable_learning(bot, update, chat):
+def disable_learning(update, context, chat):
     chat.disable_learning()
-    bot.send_message(chat_id=update.message.chat_id, text="Learning disabled")
+    context.bot.send_message(chat_id=update.message.chat_id, text="Learning disabled")
 
 @serializer
 @chat_finder
-def thanos(bot, update, chat, args):
+def thanos(update, context, chat):
     try:
         expected = md5(str(update.message.chat_id).encode()).hexdigest().upper()
-        real = args[0]
+        real = context.args[0]
         if real != expected:
-            bot.send_message(chat_id=update.message.chat_id, text="NAK // Send this message to delete half the memory of this chat.")
-            bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
+            context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Send this message to delete half the memory of this chat.")
+            context.bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
         else:
-            bot.send_message(chat_id=update.message.chat_id, text="ACK // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. Let's do some cleaning.".format(len(chat.model),
+            context.bot.send_message(chat_id=update.message.chat_id, text="ACK // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. Let's do some cleaning.".format(len(chat.model),
                                                                                                                                                                                                   len(chat.stickers),
                                                                                                                                                                                                   len(chat.animations),
                                                                                                                                                                                                   len(str(chat).encode())))
             time.sleep(6)
-            bot.send_animation(chat_id=update.message.chat_id, animation=open('thanos.mp4', 'rb'))            
+            context.bot.send_animation(chat_id=update.message.chat_id, animation=open('thanos.mp4', 'rb'))            
             
             # destroy half the chat
             chat.halve()
@@ -461,63 +458,63 @@ def thanos(bot, update, chat, args):
             chat.clean()
             
             time.sleep(6)
-            bot.send_message(chat_id=update.message.chat_id, text="Now this chat contains {} words, {} stickers and {} gifs for a total size of {} bytes.".format(len(chat.model),
+            context.bot.send_message(chat_id=update.message.chat_id, text="Now this chat contains {} words, {} stickers and {} gifs for a total size of {} bytes.".format(len(chat.model),
                                                                                                                                                                   len(chat.stickers),
                                                                                                                                                                   len(chat.animations),
                                                                                                                                                                   len(str(chat).encode())))
     except:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK // Send this message to delete half the memory of this chat.")
-        bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
+        context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Send this message to delete half the memory of this chat.")
+        context.bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
 
 @serializer
 @chat_finder
-def bof(bot, update, chat):
+def bof(update, context, chat):
     if update.message.reply_to_message and update.message.reply_to_message.audio:
-        bot.send_audio(chat_id=ADMIN, audio=update.message.reply_to_message.audio)
-        bot.send_message(chat_id=update.message.chat_id, text="ACK")
+        context.bot.send_audio(chat_id=ADMIN, audio=update.message.reply_to_message.audio)
+        context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
     elif update.message.reply_to_message and update.message.reply_to_message.voice:
-        bot.send_voice(chat_id=ADMIN, voice=update.message.reply_to_message.voice)
-        bot.send_message(chat_id=update.message.chat_id, text="ACK")
+        context.bot.send_voice(chat_id=ADMIN, voice=update.message.reply_to_message.voice)
+        context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
     elif not update.message.photo:
-        bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to an audio message with /bof or send a screenshot with /bof in the description, you could get published on @BestOfFioriktos")
+        context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to an audio message with /bof or send a screenshot with /bof in the description, you could get published on @BestOfFioriktos")
     elif update.message.caption and ("/bof" in update.message.caption or "/bestoffioriktos" in update.message.caption):
-        bot.send_photo(chat_id=ADMIN, photo=update.message.photo[-1])
-        bot.send_message(chat_id=update.message.chat_id, text="ACK")
+        context.bot.send_photo(chat_id=ADMIN, photo=update.message.photo[-1])
+        context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
 
 @serializer
 @chat_finder
-def learn_text_and_reply(bot, update, chat):
+def learn_text_and_reply(update, context, chat):
     chat.learn_text(update.message.text)
-    reply(bot, update, chat)
+    reply(update, context, chat)
 
 @serializer
 @chat_finder
-def learn_sticker_and_reply(bot, update, chat):
+def learn_sticker_and_reply(update, context, chat):
     chat.learn_sticker(update.message.sticker.file_id)
-    reply(bot, update, chat)
+    reply(update, context, chat)
 
 @serializer
 @chat_finder
-def learn_animation_and_reply(bot, update, chat):
+def learn_animation_and_reply(update, context, chat):
     chat.learn_animation(update.message.animation.file_id)
-    reply(bot, update, chat)
+    reply(update, context, chat)
 
 @serializer
 @chat_finder
-def gdpr(bot, update, chat, args):
+def gdpr(update, context, chat):
     # this code is a bit messed up
-    if len(args) == 0:
-        bot.send_message(chat_id=update.message.chat_id, text=GDPR)
+    if len(context.args) == 0:
+        context.bot.send_message(chat_id=update.message.chat_id, text=GDPR)
     else:
-        command = args[0].lower()
+        command = context.args[0].lower()
         if command == "download":
             data = str(chat)
             with open("dump.txt", "w") as dump:
                 dump.write(data)
-            bot.send_document(chat_id=update.message.chat_id, document=open("dump.txt", "rb"))
+            context.bot.send_document(chat_id=update.message.chat_id, document=open("dump.txt", "rb"))
         elif command == "delete":
             del CHATS[update.message.chat_id]
-            bot.send_message(chat_id=update.message.chat_id, text="ACK")
+            context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
         elif command == "flag":
             if update.message.reply_to_message:
                 # identify item
@@ -526,18 +523,18 @@ def gdpr(bot, update, chat, args):
                 elif update.message.reply_to_message.animation:
                     item = update.message.reply_to_message.animation.file_id
                 else:
-                    bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
+                    context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
                     return
                 # remove from bot memory
                 chat.flag(item)
                 # remove from chat history (if admin)
-                myself = bot.getChatMember(update.message.chat_id, BOT_ID)
+                myself = context.bot.getChatMember(update.message.chat_id, BOT_ID)
                 if myself["status"] == "administrator" and myself["can_delete_messages"]:
-                    bot.delete_message(update.message.chat_id, update.message.reply_to_message.message_id)
+                    context.bot.delete_message(update.message.chat_id, update.message.reply_to_message.message_id)
                 # done
-                bot.send_message(chat_id=update.message.chat_id, text="ACK")
+                context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
             else:
-                bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
+                context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
         elif command == "unflag":
             if update.message.reply_to_message:
                 # identify item
@@ -546,27 +543,27 @@ def gdpr(bot, update, chat, args):
                 elif update.message.reply_to_message.animation:
                     item = update.message.reply_to_message.animation.file_id
                 else:
-                    bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
+                    context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
                     return
                 # update bot memory
                 chat.unflag(item)
                 # done
-                bot.send_message(chat_id=update.message.chat_id, text="ACK")
+                context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
             else:
-                bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
+                context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
         else:
-            bot.send_message(chat_id=update.message.chat_id, text="NAK // Undefined command after /gdpr")
+            context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Undefined command after /gdpr")
 
 @serializer
 @chat_finder
-def welcome(bot, update, chat):
+def welcome(update, context, chat):
     # send welcome message only when added to new chat
     if len(chat.model) == 1:
         for member in update.message.new_chat_members:
             if member.username == 'FioriktosBot':
-                bot.send_message(chat_id=update.message.chat_id, text=WELCOME)
+                context.bot.send_message(chat_id=update.message.chat_id, text=WELCOME)
 
-def reply(bot, update, chat):
+def reply(update, context, chat):
     response = chat.reply()
 
     if len(response) == 2:
@@ -575,13 +572,13 @@ def reply(bot, update, chat):
 
         if content != "":
             if type_of_response == MESSAGE:
-                bot.send_message(chat_id=update.message.chat_id, text=content)
+                context.bot.send_message(chat_id=update.message.chat_id, text=content)
             elif type_of_response == STICKER:
-                bot.send_sticker(chat_id=update.message.chat_id, sticker=content)
+                context.bot.send_sticker(chat_id=update.message.chat_id, sticker=content)
             elif type_of_response == ANIMATION:
-                bot.send_animation(chat_id=update.message.chat_id, animation=content)
+                context.bot.send_animation(chat_id=update.message.chat_id, animation=content)
             elif type_of_response == AUDIO:
-                bot.send_voice(chat_id=update.message.chat_id, voice=open(content, 'rb'))
+                context.bot.send_voice(chat_id=update.message.chat_id, voice=open(content, 'rb'))
 
 
 
@@ -640,9 +637,9 @@ def thanos_big_chats():
             CHATS[chat_id].halve()
             CHATS[chat_id].clean()
 
-def error(bot, update, error):
+def error(update, context):
     """Log Errors caused by Updates."""
-    logger.warning('Update "%s" caused error "%s"', update, error)
+    logger.warning('Update "%s" caused error "%s"', update, context.error)
 
 
 
@@ -665,14 +662,13 @@ def main():
     dp.add_handler(CommandHandler("sticker", choose_sticker))
     dp.add_handler(CommandHandler("gif", choose_animation))
     dp.add_handler(CommandHandler("audio", choose_audio))
-    dp.add_handler(CommandHandler("torrent", torrent, pass_args=True))
-    dp.add_handler(CommandHandler("torrent?", torrent_question_mark))
+    dp.add_handler(CommandHandler("torrent", torrent))
     dp.add_handler(CommandHandler("enablelearning", enable_learning))
     dp.add_handler(CommandHandler("disablelearning", disable_learning))
-    dp.add_handler(CommandHandler("thanos", thanos, pass_args=True))
+    dp.add_handler(CommandHandler("thanos", thanos))
     dp.add_handler(CommandHandler("bof", bof))
     dp.add_handler(CommandHandler("bestoffioriktos", bof))
-    dp.add_handler(CommandHandler("gdpr", gdpr, pass_args=True))
+    dp.add_handler(CommandHandler("gdpr", gdpr))
 
     # on noncommand i.e. message
     dp.add_handler(MessageHandler(Filters.text, learn_text_and_reply))
