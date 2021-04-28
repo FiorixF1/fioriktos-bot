@@ -458,7 +458,7 @@ def disable_learning(update, context, chat):
 
 @serializer
 @chat_finder
-def thanos(update, context, chat, args):
+def thanos(update, context, chat):
     try:
         expected = md5(str(update.message.chat_id).encode()).hexdigest().upper()
         real = context.args[0]
@@ -522,7 +522,7 @@ def learn_animation_and_reply(update, context, chat):
 
 @serializer
 @chat_finder
-def gdpr(update, context, chat, args):
+def gdpr(update, context, chat):
     # this code is a bit messed up
     if len(context.args) == 0:
         context.bot.send_message(chat_id=update.message.chat_id, text=GDPR)
