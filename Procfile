@@ -1,1 +1,1 @@
-web: python3 FioriktosBot_ThreeLevelCache.py
+web: python3 FioriktosBot.py
