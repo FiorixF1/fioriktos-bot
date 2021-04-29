@@ -193,6 +193,15 @@ class MemoryManagerFullRam:
                 self.chats[chat_id].halve()
                 self.chats[chat_id].clean()
 
+    def download_chat(self, chat):
+        data = str(chat)
+        with open("dump.txt", "w") as dump:
+            dump.write(data)
+        return "dump.txt"
+
+    def delete_chat(chat_id):
+        del self.chats[update.message.chat_id]
+
 
 
 """ This class handles data storage and synchronization (ThreeLevelCache edition) """
@@ -280,7 +289,7 @@ class MemoryManagerThreeLevelCache:
         for chat_id in remove_from_RAM:
             del self.chats[chat_id]
 
-    def jsonify(self):
+    def jsonify(self, chat):
         serialized_chat = str(chat)
         return serialized_chat
 
@@ -303,6 +312,25 @@ class MemoryManagerThreeLevelCache:
             if len(self.chats[chat_id].model) > 25000:
                 self.chats[chat_id].halve()
                 self.chats[chat_id].clean()
+
+    def download_chat(self, chat):
+        data = self.jsonify(chat)
+        with open("dump.txt", "w") as dump:
+            dump.write(data)
+        return "dump.txt"
+
+    def delete_chat(chat_id):
+        # no need to remove from local storage: in Heroku it is freed at boot
+        chat_key = TO_KEY(chat_id)
+        if chat_key in self.network_chats:
+            # if the chat has been created recently, it may not be on S3
+            s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
+            s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=TO_KEY(update.message.chat_id))
+            self.network_chats.remove(TO_KEY(chat_id))
+        # remove from RAM
+        del self.chats[chat_id]
+
+
 
 def create_memory_manager(name):
     if name == "FullRam":
@@ -684,12 +712,10 @@ def gdpr(update, context, chat):
     else:
         command = context.args[0].lower()
         if command == "download":
-            data = str(chat)
-            with open("dump.txt", "w") as dump:
-                dump.write(data)
-            context.bot.send_document(chat_id=update.message.chat_id, document=open("dump.txt", "rb"))
+            filename = MEMORY_MANAGER.download_chat(chat)
+            context.bot.send_document(chat_id=update.message.chat_id, document=open(filename, "rb"))
         elif command == "delete":
-            del CHATS[update.message.chat_id]
+            MEMORY_MANAGER.delete_chat(update.message.chat_id)
             context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
         elif command == "flag":
             if update.message.reply_to_message:
