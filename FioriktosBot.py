@@ -199,7 +199,7 @@ class MemoryManagerFullRam:
             dump.write(data)
         return "dump.txt"
 
-    def delete_chat(chat_id):
+    def delete_chat(self, chat_id):
         del self.chats[update.message.chat_id]
 
 
@@ -319,7 +319,7 @@ class MemoryManagerThreeLevelCache:
             dump.write(data)
         return "dump.txt"
 
-    def delete_chat(chat_id):
+    def delete_chat(self, chat_id):
         # no need to remove from local storage: in Heroku it is freed at boot
         chat_key = TO_KEY(chat_id)
         if chat_key in self.network_chats:
