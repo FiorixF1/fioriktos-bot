@@ -818,7 +818,7 @@ def main():
     dp.add_handler(CommandHandler("gdpr", gdpr))
 
     # on noncommand i.e. message
-    dp.add_handler(MessageHandler(Filters.text, learn_text_and_reply))
+    dp.add_handler(MessageHandler(Filters.text & (~Filters.command), learn_text_and_reply))
     dp.add_handler(MessageHandler(Filters.sticker, learn_sticker_and_reply))
     dp.add_handler(MessageHandler(Filters.animation, learn_animation_and_reply))
     dp.add_handler(MessageHandler(Filters.photo, bof))
