@@ -379,16 +379,16 @@ class Chat:
                         guess = random.randint(0, 255)
                         self.model[token][guess] = successor
 
-    def learn_sticker(self, sticker):
-        if self.is_learning and sticker not in self.flagged_media:
+    def learn_sticker(self, sticker, unique_id):
+        if self.is_learning and unique_id not in self.flagged_media:
             if len(self.stickers) < 1024:
                 self.stickers.append(sticker)
             else:
                 guess = random.randint(0, 1023)
                 self.stickers[guess] = sticker
 
-    def learn_animation(self, animation):
-        if self.is_learning and animation not in self.flagged_media:
+    def learn_animation(self, animation, unique_id):
+        if self.is_learning and unique_id not in self.flagged_media:
             if len(self.animations) < 1024:
                 self.animations.append(animation)
             else:
@@ -513,16 +513,16 @@ class Chat:
             del self.model[word]
         del to_remove
 
-    def flag(self, item):
+    def flag(self, item, unique_id):
         while item in self.stickers:
             self.stickers.remove(item)
         while item in self.animations:
             self.animations.remove(item)
-        self.flagged_media.add(item)
+        self.flagged_media.add(unique_id)
 
-    def unflag(self, item):
-        if item in self.flagged_media:
-            self.flagged_media.remove(item)
+    def unflag(self, unique_id):
+        if unique_id in self.flagged_media:
+            self.flagged_media.remove(unique_id)
 
     def filter(self, word):
         if type(word) != type(''):
@@ -694,13 +694,13 @@ def learn_text_and_reply(update, context, chat):
 @serializer
 @chat_finder
 def learn_sticker_and_reply(update, context, chat):
-    chat.learn_sticker(update.message.sticker.file_id)
+    chat.learn_sticker(update.message.sticker.file_id, update.message.sticker.file_unique_id)
     reply(update, context, chat)
 
 @serializer
 @chat_finder
 def learn_animation_and_reply(update, context, chat):
-    chat.learn_animation(update.message.animation.file_id)
+    chat.learn_animation(update.message.animation.file_id, update.message.animation.file_unique_id)
     reply(update, context, chat)
 
 @serializer
@@ -722,13 +722,15 @@ def gdpr(update, context, chat):
                 # identify item
                 if update.message.reply_to_message.sticker:
                     item = update.message.reply_to_message.sticker.file_id
+                    unique_id = update.message.reply_to_message.sticker.file_unique_id
                 elif update.message.reply_to_message.animation:
                     item = update.message.reply_to_message.animation.file_id
+                    unique_id = update.message.reply_to_message.animation.file_unique_id
                 else:
                     context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
                     return
                 # remove from bot memory
-                chat.flag(item)
+                chat.flag(item, unique_id)
                 # remove from chat history (if admin)
                 myself = context.bot.getChatMember(update.message.chat_id, BOT_ID)
                 if myself["status"] == "administrator" and myself["can_delete_messages"]:
@@ -741,14 +743,14 @@ def gdpr(update, context, chat):
             if update.message.reply_to_message:
                 # identify item
                 if update.message.reply_to_message.sticker:
-                    item = update.message.reply_to_message.sticker.file_id
+                    unique_id = update.message.reply_to_message.sticker.file_unique_id
                 elif update.message.reply_to_message.animation:
-                    item = update.message.reply_to_message.animation.file_id
+                    unique_id = update.message.reply_to_message.animation.file_unique_id
                 else:
                     context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
                     return
                 # update bot memory
-                chat.unflag(item)
+                chat.unflag(unique_id)
                 # done
                 context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
             else:
@@ -841,6 +843,7 @@ def main():
                           webhook_url="https://{}.herokuapp.com/{}".format(HEROKU_APP_NAME, BOT_TOKEN),
                           allowed_updates=["message", "channel_post", "my_chat_member"],
                           drop_pending_updates=True)
+    time.sleep(0.1)
     updater.bot.set_webhook(url="https://{}.herokuapp.com/{}".format(HEROKU_APP_NAME, BOT_TOKEN),
                             max_connections=100,
                             allowed_updates=["message", "channel_post", "my_chat_member"],
