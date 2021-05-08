@@ -14,6 +14,12 @@ This is a Telegram bot which uses Markov chains to learn how to speak from the m
     gdpr - Privacy stuff
 ```
 
+There are a number of extra commands that can be issued through ```/gdpr```, namely:
+* ```/gdpr download``` : Download all the data for the current chat in a text file, so that a user can inspect them.
+* ```/gdpr delete``` : Erase the entire content of the current chat in one shot. Be careful when using this function: the deletion of your data will happen without asking confirmation and is not reversible, so do it wisely.
+* ```/gdpr flag``` : Remove a specific sticker or gif from Fioriktos' memory. Let's say some troll publishes a porn gif in your group. Instead of deleting it, reply to it with ```/gdpr flag```, this way the gif will be removed from the bot's memory and Fioriktos won't publish it again later. If the bot has administrator rights, it will also care about deleting the message from group history. The operation can be undone with ```/gdpr unflag```.
+* ```/gdpr tx``` : If you want to transfer the data stored by Fioriktos from one chat to another, first send this command in the source chat. The bot will answer with a code that must be sent in the target chat to complete the transfer. The code will be available for up to ten minutes (five minutes on average) and it is something like ```/gdpr rx DEADBEEF```.
+
 Since this bot has access to private messages of Telegram group users, it has been designed with a high focus on openness and transparency to guarantee that private data are not used in an improper way. The simple act of making the source code public is already a great step towards this goal, a step which has not been made by other bots similar to Fioriktos.
 
 # FAQ
@@ -35,8 +41,6 @@ The bot is deployed on Heroku and the learnt models are stored on an Amazon S3 b
 ## Are my personal data permanently stored?
 
 No. When Fioriktos is removed from a group, the relative data will be automatically deleted after 90 days of inactivity, unless the bot is added to the group again.
-
-Recently we added the possibility for the users to inspect their data and remove them completely in one shot. This is done respectively by the special commands ```/gdpr download``` and ```/gdpr delete```. Be careful when using this function: the deletion of your data will happen without asking confirmation and is not reversible, so do it wisely. It is also possible to remove a specific sticker or gif from Fioriktos' memory: let's say some troll publishes a porn gif in your group. Instead of deleting it, reply to it with ```/gdpr flag```, this way the gif will be removed from the bot's memory and Fioriktos won't publish it again later. If the bot has administrator rights, it will also care about deleting the message from group history. The operation can be undone with ```/gdpr unflag```.
 
 ## What is assuring me that you won't read my private messages?
 

@@ -93,6 +93,7 @@ GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\n- /gdpr delete : Remove all data for the current chat. NOTE: this operation is irreversible and you will NOT be asked a confirmation!" + \
        "\n- /gdpr flag : Reply to a sticker or a gif with this command to remove it from my memory. This is useful to prevent me from spamming inappropriate content." + \
        "\n- /gdpr unflag : Allow me to learn a sticker or gif that was previously flagged." + \
+       "\n- /gdpr tx : If you want to copy the memory of chat A into chat B, issue this command in chat A. You will receive a code to send inside chat B to complete the transfer." + \
        "\nFor more information, visit https://www.github.com/FiorixF1/fioriktos-bot.git or contact my developer @FiorixF1."
 
 WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact with me using the following commands:" + \
@@ -116,7 +117,8 @@ MEMORY_MANAGER = None
 """ This class handles data storage and synchronization (FullRam edition) """
 class MemoryManagerFullRam:
     def __init__(self):
-        self.chats = dict()             # key = chat_id --- value = object Chat
+        self.chats     = dict()         # key = chat_id --- value = object Chat
+        self.OTPs      = dict()         # chats ready to be transfered: key = OTP [string] --- value = chat_id [integer]
         self.last_sync = time.time()    # for automatic serialization on database
 
     def get_chat_from_id(self, chat_id):
@@ -137,6 +139,7 @@ class MemoryManagerFullRam:
             self.delete_old_chats()
             self.thanos_big_chats()
             self.store_db()
+            self.OTPs.clear()
             self.last_sync = now
 
     def load_db(self):
@@ -200,7 +203,31 @@ class MemoryManagerFullRam:
         return "dump.txt"
 
     def delete_chat(self, chat_id):
-        del self.chats[update.message.chat_id]
+        del self.chats[chat_id]
+
+    def transmit_chat(self, tx_chat_id):
+        OTP = ''.join([random.choice("0123456789ABCDEF") for i in range(8)])
+        self.OTPs[OTP] = tx_chat_id
+        return OTP
+
+    def receive_chat(self, rx_chat_id, OTP):
+        tx_chat_id = self.OTPs.get(OTP, 0)
+        if tx_chat_id == 0:
+            return False
+
+        tx = self.chats[tx_chat_id]
+        rx = Chat()
+        rx.torrent_level = tx.torrent_level
+        rx.is_learning   = tx.is_learning
+        rx.model         = {key: value[:] for key, value in tx.model.items()}
+        rx.stickers      = tx.stickers[:]
+        rx.animations    = tx.animations[:]
+        rx.flagged_media = tx.flagged_media.copy()
+        rx.last_update   = tx.last_update
+        
+        self.chats[rx_chat_id] = rx
+        del self.OTPs[OTP]
+        return True
 
 
 
@@ -210,6 +237,7 @@ class MemoryManagerThreeLevelCache:
         self.chats         = dict()         # key = chat_id [integer] --- value = Chat [object]
         self.disk_chats    = set()          # chats in local storage: set of chat_key [string]
         self.network_chats = set()          # chats in remote storage: set of chat_key [string]
+        self.OTPs          = dict()         # chats ready to be transfered: key = OTP [string] --- value = chat_id [integer]
         self.last_sync     = time.time()    # for automatic serialization on database
 
     def get_chat_from_id(self, chat_id):
@@ -242,6 +270,7 @@ class MemoryManagerThreeLevelCache:
         if now - self.last_sync > 666:  # 37% rule
             self.thanos_big_chats()
             self.store_db()
+            self.OTPs.clear()
             self.last_sync = now
 
     def load_db(self):
@@ -325,10 +354,34 @@ class MemoryManagerThreeLevelCache:
         if chat_key in self.network_chats:
             # if the chat has been created recently, it may not be on S3
             s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
-            s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=TO_KEY(update.message.chat_id))
-            self.network_chats.remove(TO_KEY(chat_id))
+            s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=chat_key)
+            self.network_chats.remove(chat_key)
         # remove from RAM
         del self.chats[chat_id]
+
+    def transmit_chat(self, tx_chat_id):
+        OTP = ''.join([random.choice("0123456789ABCDEF") for i in range(8)])
+        self.OTPs[OTP] = tx_chat_id
+        return OTP
+
+    def receive_chat(self, rx_chat_id, OTP):
+        tx_chat_id = self.OTPs.get(OTP, 0)
+        if tx_chat_id == 0:
+            return False
+
+        tx = self.chats[tx_chat_id]
+        rx = Chat()
+        rx.torrent_level = tx.torrent_level
+        rx.is_learning   = tx.is_learning
+        rx.model         = {key: value[:] for key, value in tx.model.items()}
+        rx.stickers      = tx.stickers[:]
+        rx.animations    = tx.animations[:]
+        rx.flagged_media = tx.flagged_media.copy()
+        rx.last_update   = tx.last_update
+        
+        self.chats[rx_chat_id] = rx
+        del self.OTPs[OTP]
+        return True
 
 
 
@@ -718,45 +771,68 @@ def gdpr(update, context, chat):
             MEMORY_MANAGER.delete_chat(update.message.chat_id)
             context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
         elif command == "flag":
-            if update.message.reply_to_message:
-                # identify item
-                if update.message.reply_to_message.sticker:
-                    item = update.message.reply_to_message.sticker.file_id
-                    unique_id = update.message.reply_to_message.sticker.file_unique_id
-                elif update.message.reply_to_message.animation:
-                    item = update.message.reply_to_message.animation.file_id
-                    unique_id = update.message.reply_to_message.animation.file_unique_id
+            chat_id = update.message.chat_id
+            user_id = update.message.from_user.id
+            if context.bot.getChatMember(chat_id, user_id)["status"] in ["creator", "administrator"]:
+                if update.message.reply_to_message:
+                    # identify item
+                    if update.message.reply_to_message.sticker:
+                        item = update.message.reply_to_message.sticker.file_id
+                        unique_id = update.message.reply_to_message.sticker.file_unique_id
+                    elif update.message.reply_to_message.animation:
+                        item = update.message.reply_to_message.animation.file_id
+                        unique_id = update.message.reply_to_message.animation.file_unique_id
+                    else:
+                        context.bot.send_message(chat_id=chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
+                        return
+                    # remove from bot memory
+                    chat.flag(item, unique_id)
+                    # remove from chat history (if admin)
+                    myself = context.bot.getChatMember(chat_id, BOT_ID)
+                    if myself["status"] == "administrator" and myself["can_delete_messages"]:
+                        context.bot.delete_message(chat_id, update.message.reply_to_message.message_id)
+                    # done
+                    context.bot.send_message(chat_id=chat_id, text="ACK")
                 else:
-                    context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
-                    return
-                # remove from bot memory
-                chat.flag(item, unique_id)
-                # remove from chat history (if admin)
-                myself = context.bot.getChatMember(update.message.chat_id, BOT_ID)
-                if myself["status"] == "administrator" and myself["can_delete_messages"]:
-                    context.bot.delete_message(update.message.chat_id, update.message.reply_to_message.message_id)
-                # done
-                context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
+                    context.bot.send_message(chat_id=chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
             else:
-                context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr flag")
+                context.bot.send_message(chat_id=chat_id, text="NAK // Command available only for admins")
         elif command == "unflag":
-            if update.message.reply_to_message:
-                # identify item
-                if update.message.reply_to_message.sticker:
-                    unique_id = update.message.reply_to_message.sticker.file_unique_id
-                elif update.message.reply_to_message.animation:
-                    unique_id = update.message.reply_to_message.animation.file_unique_id
+            chat_id = update.message.chat_id
+            user_id = update.message.from_user.id
+            if context.bot.getChatMember(chat_id, user_id)["status"] in ["creator", "administrator"]:
+                if update.message.reply_to_message:
+                    # identify item
+                    if update.message.reply_to_message.sticker:
+                        unique_id = update.message.reply_to_message.sticker.file_unique_id
+                    elif update.message.reply_to_message.animation:
+                        unique_id = update.message.reply_to_message.animation.file_unique_id
+                    else:
+                        context.bot.send_message(chat_id=chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
+                        return
+                    # update bot memory
+                    chat.unflag(unique_id)
+                    # done
+                    context.bot.send_message(chat_id=chat_id, text="ACK")
                 else:
-                    context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
-                    return
-                # update bot memory
-                chat.unflag(unique_id)
-                # done
-                context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
+                    context.bot.send_message(chat_id=chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
             else:
-                context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
+                context.bot.send_message(chat_id=chat_id, text="NAK // Command available only for admins")
+        elif command == "tx":
+            OTP = MEMORY_MANAGER.transmit_chat(update.message.chat_id)
+            context.bot.send_message(chat_id=update.message.chat_id, text="ACK // Send this command in the target group to copy there the memory of this chat. This code will expire after 5 minutes.")
+            context.bot.send_message(chat_id=update.message.chat_id, text="/gdpr rx {}".format(OTP))
+        elif command == "rx":
+            if len(context.args) < 2:
+                context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Missing parameter")
+            else:
+                OTP = context.args[1]
+                if MEMORY_MANAGER.receive_chat(update.message.chat_id, OTP):
+                    context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
+                else:
+                    context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Unknown or expired code")
         else:
-            context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Undefined command after /gdpr")
+            context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Unknown command after /gdpr")
 
 @serializer
 @chat_finder
