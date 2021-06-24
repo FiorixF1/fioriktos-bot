@@ -1,5 +1,5 @@
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from os import environ, mkdir
+from os import environ, mkdir, path, remove
 from functools import wraps
 from hashlib import md5
 import langdetect
@@ -349,13 +349,17 @@ class MemoryManagerThreeLevelCache:
         return "dump.txt"
 
     def delete_chat(self, chat_id):
-        # no need to remove from local storage: in Heroku it is freed at boot
         chat_key = TO_KEY(chat_id)
+        # remove from S3
         if chat_key in self.network_chats:
             # if the chat has been created recently, it may not be on S3
             s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
             s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=chat_key)
             self.network_chats.remove(chat_key)
+        # remove from local storage
+        if chat_key in self.disk_chats:
+            remove(chat_key)
+            self.disk_chats.remove(chat_key)
         # remove from RAM
         del self.chats[chat_id]
 
