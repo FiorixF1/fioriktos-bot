@@ -571,10 +571,8 @@ class Chat:
         del to_remove
 
     def flag(self, item, unique_id):
-        while item in self.stickers:
-            self.stickers.remove(item)
-        while item in self.animations:
-            self.animations.remove(item)
+        self.stickers = list(filter(lambda sticker: sticker != item and not sticker.endswith(unique_id), self.stickers))
+        self.animations = list(filter(lambda animation: animation != item and not animation.endswith(unique_id), self.animations))
         self.flagged_media.add(unique_id)
 
     def unflag(self, unique_id):
@@ -733,10 +731,10 @@ def thanos(update, context, chat):
         context.bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
 
 def bof(update, context):
-    if update.message.reply_to_message and update.message.reply_to_message.audio:
+    if update.message.reply_to_message and update.message.reply_to_message.audio and update.message.reply_to_message.from_user.id == BOT_ID:
         context.bot.send_audio(chat_id=ADMIN, audio=update.message.reply_to_message.audio)
         context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
-    elif update.message.reply_to_message and update.message.reply_to_message.voice:
+    elif update.message.reply_to_message and update.message.reply_to_message.voice and update.message.reply_to_message.from_user.id == BOT_ID:
         context.bot.send_voice(chat_id=ADMIN, voice=update.message.reply_to_message.voice)
         context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
     elif not update.message.photo:
