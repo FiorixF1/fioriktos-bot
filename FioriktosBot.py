@@ -33,16 +33,22 @@ S3_BUCKET_NAME        = environ.get("S3_BUCKET_NAME")
 
 
 """ Constants """
-BEGIN                    = ""
-END                      = 0
-ENDING_PUNCTUATION_MARKS = ".!?\n"
-MESSAGE                  = "Message"
-STICKER                  = "Sticker"
-ANIMATION                = "Animation"
-AUDIO                    = "Audio"
+BEGIN                     = ""
+END                       = 0
+ENDING_PUNCTUATION_MARKS  = ".!?\n"
+MESSAGE                   = "Message"
+STICKER                   = "Sticker"
+ANIMATION                 = "Animation"
+AUDIO                     = "Audio"
 
-PREFIX                   = "chats/"
-TO_KEY                   = lambda chat_id: PREFIX + str(chat_id) + ".txt"
+PREFIX                    = "chats/"
+TO_KEY                    = lambda chat_id: PREFIX + str(chat_id) + ".txt"
+
+CHAT_MAX_DURATION         = 7776000   # seconds in three months
+CHAT_UPDATE_TIMEOUT       = 666       # 37 % of 30 minutes
+SUCCESSOR_LIST_MAX_LENGTH = 256
+WORD_LIST_MAX_LENGTH      = 16384
+MEDIA_LIST_MAX_LENGTH     = 1024
 
 LANG_TO_VOICE = {
     'af':    'Ruben',    # redirect Afrikaans to Dutch
@@ -135,7 +141,7 @@ class MemoryManagerFullRam:
 
     def synchronize(self):
         now = time.time()
-        if now - self.last_sync > 666:  # 37% rule
+        if now - self.last_sync > CHAT_UPDATE_TIMEOUT:  # 37% rule
             self.delete_old_chats()
             self.thanos_big_chats()
             self.store_db()
@@ -150,7 +156,7 @@ class MemoryManagerFullRam:
             self.unjsonify(data)
         except Exception as e:
             # cold start: 'dump.txt' does not exist yet
-            logger.error("Exception occurred: {}".format(e))
+            logger.warning("Database not found: executing cold start")
             data = '{}'
         return data
 
@@ -187,12 +193,12 @@ class MemoryManagerFullRam:
     def delete_old_chats(self):
         now = time.time()
         for chat_id in list(self.chats.keys()):
-            if now - self.chats[chat_id].last_update > 7776000:
+            if now - self.chats[chat_id].last_update > CHAT_MAX_DURATION:
                 del self.chats[chat_id]
 
     def thanos_big_chats(self):
         for chat_id in list(self.chats.keys()):
-            if len(self.chats[chat_id].model) > 25000:
+            if len(self.chats[chat_id].model) > WORD_LIST_MAX_LENGTH:
                 self.chats[chat_id].halve()
                 self.chats[chat_id].clean()
 
@@ -267,7 +273,7 @@ class MemoryManagerThreeLevelCache:
 
     def synchronize(self):
         now = time.time()
-        if now - self.last_sync > 666:  # 37% rule
+        if now - self.last_sync > CHAT_UPDATE_TIMEOUT:  # 37% rule
             self.thanos_big_chats()
             self.store_db()
             self.OTPs.clear()
@@ -280,14 +286,14 @@ class MemoryManagerThreeLevelCache:
             
             now = time.time()
             for chat_aws in chats_aws:
-                if now - chat_aws["LastModified"].timestamp() > 7776000:
+                if now - chat_aws["LastModified"].timestamp() > CHAT_MAX_DURATION:
                     # no need to remove from local storage: in Heroku it is freed at boot
                     s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=chat_aws["Key"])
                 else:
                     self.network_chats.add(chat_aws["Key"])
         except Exception as e:
             # cold start: 'chats/' does not exist yet
-            logger.error("Exception occurred: {}".format(e))
+            logger.warning("Database not found: executing cold start")
 
         # create directory in local storage or everything will break :)
         try:
@@ -338,7 +344,7 @@ class MemoryManagerThreeLevelCache:
 
     def thanos_big_chats(self):
         for chat_id in self.chats:
-            if len(self.chats[chat_id].model) > 25000:
+            if len(self.chats[chat_id].model) > WORD_LIST_MAX_LENGTH:
                 self.chats[chat_id].halve()
                 self.chats[chat_id].clean()
 
@@ -430,26 +436,26 @@ class Chat:
                     if token not in self.model:
                         self.model[token] = list()
 
-                    if len(self.model[token]) < 256:
+                    if len(self.model[token]) < SUCCESSOR_LIST_MAX_LENGTH:
                         self.model[token].append(successor)
                     else:
-                        guess = random.randint(0, 255)
+                        guess = random.randint(0, SUCCESSOR_LIST_MAX_LENGTH-1)
                         self.model[token][guess] = successor
 
     def learn_sticker(self, sticker, unique_id):
         if self.is_learning and unique_id not in self.flagged_media:
-            if len(self.stickers) < 1024:
+            if len(self.stickers) < MEDIA_LIST_MAX_LENGTH:
                 self.stickers.append(sticker)
             else:
-                guess = random.randint(0, 1023)
+                guess = random.randint(0, MEDIA_LIST_MAX_LENGTH-1)
                 self.stickers[guess] = sticker
 
     def learn_animation(self, animation, unique_id):
         if self.is_learning and unique_id not in self.flagged_media:
-            if len(self.animations) < 1024:
+            if len(self.animations) < MEDIA_LIST_MAX_LENGTH:
                 self.animations.append(animation)
             else:
-                guess = random.randint(0, 1023)
+                guess = random.randint(0, MEDIA_LIST_MAX_LENGTH-1)
                 self.animations[guess] = animation
 
     def reply(self):
