@@ -73,3 +73,12 @@ Note that Fioriktos can be configured in two modes: *FullRam* and *ThreeLevelCac
 
 At this point, you have created a working copy of Fioriktos. Now you can make all changes you desire to your GitHub fork and deploy those changes to Heroku at any time. Have fun!
 
+## Support the project
+
+If you'd like to support the project, please contribute. This will be helpful to keep the bot up and running while being used in hundreds of groups.
+
+<img src="https://www.paypalobjects.com/webstatic/mktg/Logo/pp-logo-100px.png" alt="PayPal logo"/> - [PayPal Me](https://paypal.me/FiorixF1)
+
+<img src="https://en.bitcoin.it/w/images/en/c/cb/BC_Logotype.png" alt="Bitcoin logo" width=100/> - 3KDJuj2GVpFc8kMsRBY7iM9NAJoqgzYvQw
+
+Thanks for your support!
