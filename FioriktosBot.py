@@ -202,11 +202,12 @@ class MemoryManagerFullRam:
                 self.chats[chat_id].halve()
                 self.chats[chat_id].clean()
 
-    def download_chat(self, chat):
+    def download_chat(self, chat, chat_id):
         data = str(chat)
-        with open("dump.txt", "w") as dump:
+        filename = str(chat_id) + ".txt"
+        with open(filename, "w") as dump:
             dump.write(data)
-        return "dump.txt"
+        return filename
 
     def delete_chat(self, chat_id):
         del self.chats[chat_id]
@@ -348,11 +349,12 @@ class MemoryManagerThreeLevelCache:
                 self.chats[chat_id].halve()
                 self.chats[chat_id].clean()
 
-    def download_chat(self, chat):
+    def download_chat(self, chat, chat_id):
         data = self.jsonify(chat)
-        with open("dump.txt", "w") as dump:
+        filename = str(chat_id) + ".txt"
+        with open(filename, "w") as dump:
             dump.write(data)
-        return "dump.txt"
+        return filename
 
     def delete_chat(self, chat_id):
         chat_key = TO_KEY(chat_id)
@@ -504,9 +506,10 @@ class Chat:
             voice = LANG_TO_VOICE['it']
 
         polly_client = boto3.client("polly", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
+        filtered_text = ''.join(filter(lambda ch: ch.isalnum(), text))
         response = polly_client.synthesize_speech(VoiceId=voice,
                                                   OutputFormat='mp3',
-                                                  Text=text)
+                                                  Text=filtered_text)
         with open("audio.mp3", "wb") as audio:
             audio.write(response['AudioStream'].read())
         return "audio.mp3"
@@ -776,7 +779,7 @@ def gdpr(update, context, chat):
     else:
         command = context.args[0].lower()
         if command == "download":
-            filename = MEMORY_MANAGER.download_chat(chat)
+            filename = MEMORY_MANAGER.download_chat(chat, update.message.chat_id)
             context.bot.send_document(chat_id=update.message.chat_id, document=open(filename, "rb"))
         elif command == "delete":
             MEMORY_MANAGER.delete_chat(update.message.chat_id)
