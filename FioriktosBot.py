@@ -283,15 +283,19 @@ class MemoryManagerThreeLevelCache:
     def load_db(self):
         try:
             s3_client = boto3.client("s3", aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=REGION_NAME)
-            chats_aws = s3_client.list_objects(Bucket=S3_BUCKET_NAME, Prefix=PREFIX)["Contents"][1:]    
+
+            paginator = s3_client.get_paginator('list_objects_v2')
+            pages = paginator.paginate(Bucket=S3_BUCKET_NAME, Prefix=PREFIX)
             
             now = time.time()
-            for chat_aws in chats_aws:
-                if now - chat_aws["LastModified"].timestamp() > CHAT_MAX_DURATION:
-                    # no need to remove from local storage: in Heroku it is freed at boot
-                    s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=chat_aws["Key"])
-                else:
-                    self.network_chats.add(chat_aws["Key"])
+            for page in pages:
+                for chat_aws in page["Contents"]:
+                    if now - chat_aws["LastModified"].timestamp() > CHAT_MAX_DURATION and chat_aws["Key"] != PREFIX:
+                        # no need to remove from local storage: in Heroku it is freed at boot
+                        s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=chat_aws["Key"])
+                    else:
+                        self.network_chats.add(chat_aws["Key"])
+            
         except Exception as e:
             # cold start: 'chats/' does not exist yet
             logger.warning("Database not found: executing cold start")
