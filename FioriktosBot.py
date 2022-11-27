@@ -786,8 +786,11 @@ def gdpr(update, context, chat):
             filename = MEMORY_MANAGER.download_chat(chat, update.message.chat_id)
             context.bot.send_document(chat_id=update.message.chat_id, document=open(filename, "rb"))
         elif command == "delete":
-            MEMORY_MANAGER.delete_chat(update.message.chat_id)
+            if update.message.chat_id == ADMIN:
             context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
+            else:
+            MEMORY_MANAGER.delete_chat(update.message.chat_id)
+            context.bot.send_message(chat_id=update.message.chat_id, text="no permission")
         elif command == "flag":
             chat_id = update.message.chat_id
             user_id = update.message.from_user.id
@@ -835,7 +838,7 @@ def gdpr(update, context, chat):
                 else:
                     context.bot.send_message(chat_id=chat_id, text="NAK // Reply to a sticker or a gif with /gdpr unflag")
             else:
-                context.bot.send_message(chat_id=chat_id, text="NAK // Command available only for admins")
+                context.bot.send_message(chat_id=chat_id, text="NAK // Command available only for s")
         elif command == "tx":
             OTP = MEMORY_MANAGER.transmit_chat(update.message.chat_id)
             context.bot.send_message(chat_id=update.message.chat_id, text="ACK // Send this command in the target group to copy there the memory of this chat. This code will expire after 5 minutes.")
