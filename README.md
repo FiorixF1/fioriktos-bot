@@ -75,10 +75,11 @@ At this point, you have created a working copy of Fioriktos. Now you can make al
 
 ## Support the project
 
-If you'd like to support the project, please contribute. This will be helpful to keep the bot up and running while being used in hundreds of groups.
+The bot unfortunately does not run for free. Amazon S3 must be paid, and since November 2022 Heroku has removed the free plan from their products, hence it must be paid as well. As a result, a simplistic bot created for fun has become too much expensive for me. For this reason, I opened an account on *Buy me a Coffee* so that you can contribute to keep the bot running. The objective is to keep a fund of 15 € per month, which is a lot for a single person, but they become a little quantity if divided among many people. You can contribute through single donations or by subscribing to one of the following tiers:
+* Bronze 🥉 level 2€ / month
+* Silver 🥈 level 5€ / month
+* Gold 🥇 level 8€ / month
 
-<img src="https://www.paypalobjects.com/webstatic/mktg/Logo/pp-logo-100px.png" alt="PayPal logo"/> - [PayPal Me](https://paypal.me/FiorixF1)
-
-<img src="https://en.bitcoin.it/w/images/en/c/cb/BC_Logotype.png" alt="Bitcoin logo" width=100/> - 3KDJuj2GVpFc8kMsRBY7iM9NAJoqgzYvQw
+<img src="https://www.buymeacoffee.com/assets/img/guidelines/download-assets-sm-1.svg" alt="Buymeacoffee logo" width=100/> - [Buy me a coffee](https://www.buymeacoffee.com/fiorixf2W)
 
 Thanks for your support!
