@@ -54,23 +54,26 @@ LANG_TO_VOICE = {
     'af':    'Ruben',    # redirect Afrikaans to Dutch
     'ar':    'Zeina',
     'bg':    'Maxim',    # redirect Bulgarian to Russian
-    'ca':    'Miguel',   # redirect Catalan to Spanish
-    'cs':    'Maxim',    # redirect Czech to Russian
+    'ca':    'Arlet',
+    'cs':    'Jacek',    # redirect Czech to Polish
     'cy':    'Gwyneth',
     'da':    'Mads',
     'de':    'Hans',
     'en':    'Joey',
     'es':    'Miguel',
+    'et':    'Suvi',     # redirect Estonian to Finnish
     'fa':    'Zeina',    # redirect Farsi to Arabic
+    'fi':    'Suvi',
     'fr':    'Mathieu',
     'hi':    'Aditi',
-    'hr':    'Maxim',    # redirect Croatian to Russian
+    'hr':    'Jacek',    # redirect Croatian to Polish
     'is':    'Karl',
     'it':    'Giorgio',
     'ja':    'Takumi',
     'ko':    'Seoyeon',
     'mk':    'Maxim',    # redirect Macedonian to Russian
     'mr':    'Aditi',    # redirect Marathi to Hindi
+    'nb':    'Liv',
     'ne':    'Aditi',    # redirect Nepali to Hindi
     'nl':    'Ruben',
     'no':    'Liv',
@@ -78,14 +81,24 @@ LANG_TO_VOICE = {
     'pt':    'Ricardo',
     'ro':    'Carmen',
     'ru':    'Maxim',
-    'sl':    'Maxim',    # redirect Slovene to Russian
-    'sk':    'Maxim',    # redirect Slovak to Russian
+    'sl':    'Jacek',    # redirect Slovene to Polish
+    'sk':    'Jacek',    # redirect Slovak to Polish
     'sv':    'Astrid',
     'tr':    'Filiz',
     'uk':    'Maxim',    # redirect Ukrainian to Russian
     'zh-cn': 'Zhiyu',
     'zh-tw': 'Zhiyu'
 }
+
+
+
+SUPPORT_ME = "If you like my work, please make a donation on https://www.buymeacoffee.com/fiorixf2W - this is needed to keep me running!" + \
+             "\nYou can contribute through single donations or by subscribing to one of the following tiers:" + \
+             "\n- Bronze 🥉 level 2€ / month" + \
+             "\n- Silver 🥈 level 5€ / month" + \
+             "\n- Gold 🥇 level 8€ / month" + \
+             "\n" + \
+             "\nThank you!"
 
 GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\n- Chat ID" + \
@@ -100,7 +113,8 @@ GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\n- /gdpr flag : Reply to a sticker or a gif with this command to remove it from my memory. This is useful to prevent me from spamming inappropriate content." + \
        "\n- /gdpr unflag : Allow me to learn a sticker or gif that was previously flagged." + \
        "\n- /gdpr tx : If you want to copy the memory of chat A into chat B, issue this command in chat A. You will receive a code to send inside chat B to complete the transfer." + \
-       "\nFor more information, visit https://www.github.com/FiorixF1/fioriktos-bot.git or contact my developer @FiorixF1."
+       "\nFor more information, visit https://www.github.com/FiorixF1/fioriktos-bot.git or contact my developer @FiorixF2.\n\n" + \
+       SUPPORT_ME
 
 WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact with me using the following commands:" + \
           "\n- /fioriktos : Let me generate a message" + \
@@ -111,7 +125,9 @@ WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact wit
           "\n- You can enable or disable my learning ability with the commands /enablelearning and /disablelearning" + \
           "\n- /thanos : This command will delete half the memory of the chat. Use it wisely!" + \
           "\n- /bof : If I say something funny, you can make a screenshot and send it with this command in the description. Your screenshot could get published on @BestOfFioriktos. In case of an audio message, just reply to it with /bof" + \
-          "\n- /gdpr : Here you can have more info about privacy, special commands and visit my source code 💻"
+          "\n- /gdpr : Here you can have more info about privacy, special commands and visit my source code 💻\n\n" + \
+          SUPPORT_ME
+
 
 
 
@@ -466,7 +482,10 @@ class Chat:
 
     def reply(self):
         if random.random()*10 < self.torrent_level**2/10:
-            if random.random()*10 < 9.0:
+            dice = random.random()*10
+            if dice < 0.01:
+                return (MESSAGE, SUPPORT_ME)
+            elif dice < 9.0:
                 return (MESSAGE, self.talk())
             else:
                 type_of_reply = random.choice([STICKER, ANIMATION, AUDIO])
