@@ -774,9 +774,6 @@ def bof(update, context):
     elif update.message.reply_to_message and update.message.reply_to_message.voice and update.message.reply_to_message.from_user.id == BOT_ID:
         context.bot.send_voice(chat_id=ADMIN, voice=update.message.reply_to_message.voice)
         context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
-    elif update.message.reply_to_message and update.message.reply_to_message.photo:
-        context.bot.send_photo(chat_id=ADMIN, photo=update.message.reply_to_message.photo[-1])
-        context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
     elif not update.message.photo:
         context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to an audio message with /bof or send a screenshot with /bof in the description, you could get published on @BestOfFioriktos")
     elif update.message.caption and ("/bof" in update.message.caption or "/bestoffioriktos" in update.message.caption):
