@@ -515,8 +515,9 @@ class Chat:
             walker = new_token
         return ' '.join(answer)
 
-    def speech(self):
-        text = self.talk()
+    def speech(self, text):
+        if not text:
+            text = self.talk()
         
         try:
             candidates = langdetect.detect_langs(text)
@@ -549,9 +550,9 @@ class Chat:
         except:
             return ""
 
-    def choose_audio(self):
+    def choose_audio(self, text=None):
         try:
-            return self.speech()
+            return self.speech(text)
         except:
             return ""
 
@@ -694,7 +695,11 @@ def choose_animation(update, context, chat):
 @serializer
 @chat_finder
 def choose_audio(update, context, chat):
-    reply = chat.choose_audio()
+    text = None
+    if update.message.reply_to_message and update.message.reply_to_message.text:
+        text = update.message.reply_to_message.text
+    
+    reply = chat.choose_audio(text)
     if reply != "":
         context.bot.send_voice(chat_id=update.message.chat_id, voice=open(reply, 'rb'))
     else:
@@ -768,6 +773,9 @@ def bof(update, context):
         context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
     elif update.message.reply_to_message and update.message.reply_to_message.voice and update.message.reply_to_message.from_user.id == BOT_ID:
         context.bot.send_voice(chat_id=ADMIN, voice=update.message.reply_to_message.voice)
+        context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
+    elif update.message.reply_to_message and update.message.reply_to_message.photo:
+        context.bot.send_photo(chat_id=ADMIN, photo=update.message.reply_to_message.photo[-1])
         context.bot.send_message(chat_id=update.message.chat_id, text="ACK")
     elif not update.message.photo:
         context.bot.send_message(chat_id=update.message.chat_id, text="NAK // Reply to an audio message with /bof or send a screenshot with /bof in the description, you could get published on @BestOfFioriktos")
