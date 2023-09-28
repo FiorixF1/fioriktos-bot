@@ -234,10 +234,15 @@ class LocalThreeLevelCache:
             # fallback to Italian
             voice = LANG_TO_VOICE['it']
 
-        polly_client = boto3.client("polly", aws_access_key_id=self.AWS_ACCESS_KEY_ID, aws_secret_access_key=self.AWS_SECRET_ACCESS_KEY, region_name=self.REGION_NAME)
-        response = polly_client.synthesize_speech(VoiceId=voice,
-                                                  OutputFormat='mp3',
-                                                  Text=text)
+        try:
+            polly_client = boto3.client("polly", aws_access_key_id=self.AWS_ACCESS_KEY_ID, aws_secret_access_key=self.AWS_SECRET_ACCESS_KEY, region_name=self.REGION_NAME)
+            response = polly_client.synthesize_speech(VoiceId=voice,
+                                                      OutputFormat='mp3',
+                                                      Text=text)
+        except Exception as e:
+            # log some kind of error from AWS
+            self.logger.error("Exception occurred: {}".format(e))
+            return ""
 
         with open("audio.mp3", "wb") as audio:
             audio.write(response['AudioStream'].read())

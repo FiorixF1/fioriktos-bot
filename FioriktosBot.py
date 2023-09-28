@@ -136,11 +136,12 @@ def thanos(update, context, chat):
         expected = md5(str(update.message.chat_id).encode()).hexdigest().upper()
         real = context.args[0]
         if real != expected:
-            context.bot.send_message(chat_id=update.message.chat_id, text=Global.NOK + " // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. " + \
-                "Send this message to delete half the memory of this chat.".format(len(chat.model),
-                                                                                   len(chat.stickers),
-                                                                                   len(chat.animations),
-                                                                                   len(str(chat).encode())))
+            context.bot.send_message(chat_id=update.message.chat_id, text=Global.NOK + \
+                " // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. ".format(len(chat.model),
+                                                                                                                      len(chat.stickers),
+                                                                                                                      len(chat.animations),
+                                                                                                                      len(str(chat).encode())) + \
+                "Send this message to delete half the memory of this chat.")
             context.bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
         else:
             context.bot.send_message(chat_id=update.message.chat_id, text=Global.OK + " // Let's do some cleaning!")
@@ -158,11 +159,12 @@ def thanos(update, context, chat):
                                                                                                                                                                           len(chat.animations),
                                                                                                                                                                           len(str(chat).encode())))
     except:
-        context.bot.send_message(chat_id=update.message.chat_id, text=Global.NOK + " // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. " + \
-            "Send this message to delete half the memory of this chat.".format(len(chat.model),
-                                                                               len(chat.stickers),
-                                                                               len(chat.animations),
-                                                                               len(str(chat).encode())))
+        context.bot.send_message(chat_id=update.message.chat_id, text=Global.NOK + \
+             " // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. ".format(len(chat.model),
+                                                                                                                   len(chat.stickers),
+                                                                                                                   len(chat.animations),
+                                                                                                                   len(str(chat).encode())) + \
+             "Send this message to delete half the memory of this chat.")
         context.bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
 
 def bof(update, context):
