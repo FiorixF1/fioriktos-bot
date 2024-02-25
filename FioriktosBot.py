@@ -305,6 +305,8 @@ def reply(update, context, chat):
 def error(update, context):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, context.error)
+    if context.error == "Not enough rights to send text messages to the chat":
+        bot.leave_chat(update.effective_chat.id)
 
 
 

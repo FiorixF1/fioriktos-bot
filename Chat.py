@@ -118,7 +118,7 @@ class Chat:
             text = self.talk()
         
         filtered_text = self.filter(text)
-        return manager.text_to_speech(filtered_text)
+        return self.manager.text_to_speech(filtered_text)
 
     def choose_sticker(self):
         try:

@@ -21,7 +21,7 @@ GDPR = "To work correctly, I need to store these information for each chat:" + \
        "\n- /gdpr flag : Reply to a sticker or a gif with this command to remove it from my memory. This is useful to prevent me from spamming inappropriate content." + \
        "\n- /gdpr unflag : Allow me to learn a sticker or gif that was previously flagged." + \
        "\n- /gdpr tx : If you want to copy the memory of chat A into chat B, issue this command in chat A. You will receive a code to send inside chat B to complete the transfer." + \
-       "\nFor more information, visit https://www.github.com/FiorixF1/fioriktos-bot.git or contact my developer @FiorixF2.\n\n" + \
+       "\nFor more information, visit https://www.github.com/FiorixF1/fioriktos-bot.git or contact my developer @FiorixF1.\n\n" + \
        SUPPORT_ME
 
 WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact with me using the following commands:" + \
