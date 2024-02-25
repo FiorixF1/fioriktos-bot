@@ -18,5 +18,5 @@ python-telegram-bot==13.4.1
 requests==2.20.1
 s3transfer==0.3.3
 six==1.13.0
-Werkzeug==0.15.4
+Werkzeug==2.2.3
 xdis==3.8.8
