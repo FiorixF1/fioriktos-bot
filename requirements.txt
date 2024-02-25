@@ -1,6 +1,6 @@
 ﻿boto3==1.12.39
 botocore==1.15.41
-certifi==2018.10.15
+certifi==2022.12.7
 chardet==3.0.4
 Click==7.0
 docutils==0.15.2
@@ -18,5 +18,5 @@ python-telegram-bot==13.4.1
 requests==2.20.1
 s3transfer==0.3.3
 six==1.13.0
-Werkzeug==0.15.4
+Werkzeug==2.2.3
 xdis==3.8.8
