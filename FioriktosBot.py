@@ -40,16 +40,18 @@ def register_environment_managers():
 def chat_finder(f):
     @wraps(f)
     def wrapped(update, context, *args, **kwargs):
-        chat_id = update.message.chat_id
-        chat = ENVIRONMENT_MANAGER.get_chat_from_id(chat_id)
-        f(update, context, chat, *args, **kwargs)
+        if int(time.strftime('%-H')) > 6:
+            chat_id = update.message.chat_id
+            chat = ENVIRONMENT_MANAGER.get_chat_from_id(chat_id)
+            f(update, context, chat, *args, **kwargs)
     return wrapped
 
 def serializer(f):
     @wraps(f)
     def wrapped(update, context, *args, **kwargs):
-        f(update, context, *args, **kwargs)
-        ENVIRONMENT_MANAGER.synchronize()
+        if int(time.strftime('%-H')) > 6:
+            f(update, context, *args, **kwargs)
+            ENVIRONMENT_MANAGER.synchronize()
     return wrapped
 
 
