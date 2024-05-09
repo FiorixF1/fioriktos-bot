@@ -26,12 +26,12 @@ ENVIRONMENT_MANAGER = None
 def register_environment_managers():
     import HerokuS3FullRam
     import HerokuS3ThreeLevelCache
-    import LocalThreeLevelCache
+    import LocalTwoLevelCache
     
     return {
         "HerokuS3FullRam": HerokuS3FullRam.HerokuS3FullRam,
         "HerokuS3ThreeLevelCache": HerokuS3ThreeLevelCache.HerokuS3ThreeLevelCache,
-        "LocalThreeLevelCache": LocalThreeLevelCache.LocalThreeLevelCache
+        "LocalTwoLevelCache": LocalTwoLevelCache.LocalTwoLevelCache
     }
 
 
