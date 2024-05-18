@@ -19,7 +19,7 @@ class LocalTwoLevelCache:
         self.TO_KEY                = lambda chat_id: self.PREFIX + str(chat_id) + ".txt"
 
         self.CHAT_MAX_DURATION     = 7776000   # seconds in three months
-        self.CHAT_UPDATE_TIMEOUT   = 360       # 5 minutes
+        self.CHAT_UPDATE_TIMEOUT   = 360       # 6 minutes
         self.WORD_LIST_MAX_LENGTH  = 16384
         
         self.logger = logger
@@ -53,15 +53,16 @@ class LocalTwoLevelCache:
 
     def load_db(self):
         try:
+            to_be_deleted = []
             now = time.time()
             for file in listdir(self.PREFIX):
                 filename = fsdecode(file)
                 this_path = path.join(self.PREFIX, filename)
                 if filename.endswith(".txt"):
                     if now - path.getmtime(this_path) > self.CHAT_MAX_DURATION:
-                        to_be_deleted.add(this_path)
+                        to_be_deleted.append(this_path)
                     else:
-                        self.disk_chats.add(self.TO_KEY(filename))
+                        self.disk_chats.add(this_path)
             for this_path in to_be_deleted:
                 remove(this_path)
         except Exception as e:
