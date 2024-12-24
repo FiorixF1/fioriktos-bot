@@ -217,6 +217,6 @@ class Chat:
                          "stickers": self.stickers,
                          "animations": self.animations,
                          "flagged_media": list(self.flagged_media),
-                         "last_update": self.last_update},
-                         "restricted_mode": self.restricted_mode
+                         "last_update": self.last_update,
+                         "restricted_mode": self.restricted_mode}
         return json.dumps(jsonification)
