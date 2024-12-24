@@ -11,6 +11,7 @@ This is a Telegram bot which uses Markov chains to learn how to speak from the m
     disablelearning - Disable learning
     thanos - Halve the memory of this chat
     bof - Best of Fioriktos
+    restrict - Limit commands to admins
     gdpr - Privacy stuff
 ```
 

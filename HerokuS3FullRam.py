@@ -128,6 +128,7 @@ class HerokuS3FullRam:
             deserialized_chat.animations = jsonized_chat.get("animations", DEFAULT_ANIMATIONS())
             deserialized_chat.flagged_media = set(jsonized_chat.get("flagged_media", DEFAULT_FLAGGED_MEDIA()))
             deserialized_chat.last_update = jsonized_chat.get("last_update", DEFAULT_LAST_UPDATE())
+            deserialized_chat.restricted_mode = jsonized_chat.get("restricted_mode", DEFAULT_RESTRICTED_MODE())
 
             self.chats[int(chat_id)] = deserialized_chat
 
@@ -165,13 +166,14 @@ class HerokuS3FullRam:
 
         tx = self.chats[tx_chat_id]
         rx = Chat(self)
-        rx.torrent_level = tx.torrent_level
-        rx.is_learning   = tx.is_learning
-        rx.model         = {key: value[:] for key, value in tx.model.items()}
-        rx.stickers      = tx.stickers[:]
-        rx.animations    = tx.animations[:]
-        rx.flagged_media = tx.flagged_media.copy()
-        rx.last_update   = tx.last_update
+        rx.torrent_level   = tx.torrent_level
+        rx.is_learning     = tx.is_learning
+        rx.model           = {key: value[:] for key, value in tx.model.items()}
+        rx.stickers        = tx.stickers[:]
+        rx.animations      = tx.animations[:]
+        rx.flagged_media   = tx.flagged_media.copy()
+        rx.last_update     = tx.last_update
+        rx.restricted_mode = tx.restricted_mode
         
         self.chats[rx_chat_id] = rx
         del self.OTPs[OTP]

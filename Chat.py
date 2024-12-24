@@ -19,6 +19,7 @@ DEFAULT_STICKERS          = lambda: []
 DEFAULT_ANIMATIONS        = lambda: []
 DEFAULT_FLAGGED_MEDIA     = lambda: set()
 DEFAULT_LAST_UPDATE       = lambda: time.time()
+DEFAULT_RESTRICTED_MODE   = lambda: False
 
 SUCCESSOR_LIST_MAX_LENGTH = 256
 MEDIA_LIST_MAX_LENGTH     = 1024
@@ -32,6 +33,7 @@ class Chat:
         self.animations = DEFAULT_ANIMATIONS()
         self.flagged_media = DEFAULT_FLAGGED_MEDIA()
         self.last_update = DEFAULT_LAST_UPDATE()
+        self.restricted_mode = DEFAULT_RESTRICTED_MODE()
         self.dirty_bit = 1
         self.manager = manager
 
@@ -197,6 +199,12 @@ class Chat:
         if unique_id in self.flagged_media:
             self.flagged_media.remove(unique_id)
 
+    def set_restricted_mode(self, restricted_mode):
+        self.restricted_mode = restricted_mode
+
+    def get_restricted_mode(self):
+        return self.restricted_mode
+
     def filter(self, word):
         if type(word) != type(''):
             return word
@@ -209,5 +217,6 @@ class Chat:
                          "stickers": self.stickers,
                          "animations": self.animations,
                          "flagged_media": list(self.flagged_media),
-                         "last_update": self.last_update}
+                         "last_update": self.last_update},
+                         "restricted_mode": self.restricted_mode
         return json.dumps(jsonification)

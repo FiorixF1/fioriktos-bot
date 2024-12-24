@@ -33,6 +33,7 @@ WELCOME = "Hi! I am Fioriktos and I can learn how to speak! You can interact wit
           "\n- You can enable or disable my learning ability with the commands /enablelearning and /disablelearning" + \
           "\n- /thanos : This command will delete half the memory of the chat. Use it wisely!" + \
           "\n- /bof : If I say something funny, you can make a screenshot and send it with this command in the description. Your screenshot could get published on @BestOfFioriktos. In case of an audio message, just reply to it with /bof" + \
+          "\n- /restrict : Limit my commands to administrators only" + \
           "\n- /gdpr : Here you can have more info about privacy, special commands and visit my source code 💻\n\n" + \
           SUPPORT_ME
 

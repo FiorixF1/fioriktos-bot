@@ -109,65 +109,69 @@ def torrent(update, context, chat):
     if len(context.args) == 0:
         context.bot.send_message(chat_id=update.message.chat_id, text="Torrent level is {}\n\nChange with /torrent followed by a number between 0 and 10.".format(chat.get_torrent()))
     else:
-        try:
-            quantity = int(context.args[0])
-            if quantity < 0 or quantity > 10:
+        if (not chat.get_restricted_mode()) or context.bot.getChatMember(update.message.chat_id, update.message.from_user.id)["status"] in ["creator", "administrator"]:
+            try:
+                quantity = int(context.args[0])
+                if quantity < 0 or quantity > 10:
+                    context.bot.send_message(chat_id=update.message.chat_id, text=Global.NOK + " // Send /torrent with a number between 0 and 10.")
+                else:
+                    chat.set_torrent(quantity)
+                    context.bot.send_message(chat_id=update.message.chat_id, text=Global.OK)
+            except:
                 context.bot.send_message(chat_id=update.message.chat_id, text=Global.NOK + " // Send /torrent with a number between 0 and 10.")
-            else:
-                chat.set_torrent(quantity)
-                context.bot.send_message(chat_id=update.message.chat_id, text=Global.OK)
-        except:
-            context.bot.send_message(chat_id=update.message.chat_id, text=Global.NOK + " // Send /torrent with a number between 0 and 10.")
 
 @serializer
 @chat_finder
 def enable_learning(update, context, chat):
-    chat.enable_learning()
-    context.bot.send_message(chat_id=update.message.chat_id, text="Learning enabled")
+    if (not chat.get_restricted_mode()) or context.bot.getChatMember(update.message.chat_id, update.message.from_user.id)["status"] in ["creator", "administrator"]:
+        chat.enable_learning()
+        context.bot.send_message(chat_id=update.message.chat_id, text="Learning enabled")
 
 @serializer
 @chat_finder
 def disable_learning(update, context, chat):
-    chat.disable_learning()
-    context.bot.send_message(chat_id=update.message.chat_id, text="Learning disabled")
+    if (not chat.get_restricted_mode()) or context.bot.getChatMember(update.message.chat_id, update.message.from_user.id)["status"] in ["creator", "administrator"]:
+        chat.disable_learning()
+        context.bot.send_message(chat_id=update.message.chat_id, text="Learning disabled")
 
 @serializer
 @chat_finder
 def thanos(update, context, chat):
-    try:
-        expected = md5(str(update.message.chat_id).encode()).hexdigest().upper()
-        real = context.args[0]
-        if real != expected:
+    if (not chat.get_restricted_mode()) or context.bot.getChatMember(update.message.chat_id, update.message.from_user.id)["status"] in ["creator", "administrator"]:
+        try:
+            expected = md5(str(update.message.chat_id).encode()).hexdigest().upper()
+            real = context.args[0]
+            if real != expected:
+                context.bot.send_message(chat_id=update.message.chat_id, text=Global.NOK + \
+                    " // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. ".format(len(chat.model),
+                                                                                                                          len(chat.stickers),
+                                                                                                                          len(chat.animations),
+                                                                                                                          len(str(chat).encode())) + \
+                    "Send this message to delete half the memory of this chat.")
+                context.bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
+            else:
+                context.bot.send_message(chat_id=update.message.chat_id, text=Global.OK + " // Let's do some cleaning!")
+                time.sleep(3)
+                context.bot.send_animation(chat_id=update.message.chat_id, animation=open('thanos.mp4', 'rb'))            
+
+                # destroy half the chat
+                chat.halve()
+                # delete isolated words
+                chat.clean()
+
+                time.sleep(6)
+                context.bot.send_message(chat_id=update.message.chat_id, text="Now this chat contains {} words, {} stickers and {} gifs for a total size of {} bytes.".format(len(chat.model),
+                                                                                                                                                                              len(chat.stickers),
+                                                                                                                                                                              len(chat.animations),
+                                                                                                                                                                              len(str(chat).encode())))
+        except:
             context.bot.send_message(chat_id=update.message.chat_id, text=Global.NOK + \
-                " // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. ".format(len(chat.model),
-                                                                                                                      len(chat.stickers),
-                                                                                                                      len(chat.animations),
-                                                                                                                      len(str(chat).encode())) + \
-                "Send this message to delete half the memory of this chat.")
+                 " // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. ".format(len(chat.model),
+                                                                                                                       len(chat.stickers),
+                                                                                                                       len(chat.animations),
+                                                                                                                       len(str(chat).encode())) + \
+                 "Send this message to delete half the memory of this chat.")
             context.bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
-        else:
-            context.bot.send_message(chat_id=update.message.chat_id, text=Global.OK + " // Let's do some cleaning!")
-            time.sleep(3)
-            context.bot.send_animation(chat_id=update.message.chat_id, animation=open('thanos.mp4', 'rb'))            
-            
-            # destroy half the chat
-            chat.halve()
-            # delete isolated words
-            chat.clean()
-            
-            time.sleep(6)
-            context.bot.send_message(chat_id=update.message.chat_id, text="Now this chat contains {} words, {} stickers and {} gifs for a total size of {} bytes.".format(len(chat.model),
-                                                                                                                                                                          len(chat.stickers),
-                                                                                                                                                                          len(chat.animations),
-                                                                                                                                                                          len(str(chat).encode())))
-    except:
-        context.bot.send_message(chat_id=update.message.chat_id, text=Global.NOK + \
-             " // Currently this chat has {} words, {} stickers and {} gifs for a total size of {} bytes. ".format(len(chat.model),
-                                                                                                                   len(chat.stickers),
-                                                                                                                   len(chat.animations),
-                                                                                                                   len(str(chat).encode())) + \
-             "Send this message to delete half the memory of this chat.")
-        context.bot.send_message(chat_id=update.message.chat_id, text="/thanos {}".format(expected))
 
 def bof(update, context):
     if update.message.reply_to_message and update.message.reply_to_message.audio and update.message.reply_to_message.from_user.id == Global.BOT_ID:
@@ -202,6 +206,19 @@ def learn_animation_and_reply(update, context, chat):
 
 @serializer
 @chat_finder
+def restrict(update, context, chat):
+    chat_id = update.message.chat_id
+    user_id = update.message.from_user.id
+    if context.bot.getChatMember(chat_id, user_id)["status"] in ["creator", "administrator"]:
+        restricted_mode = chat.get_restricted_mode()
+        chat.set_restricted_mode(not restricted_mode)
+        if not restricted_mode:
+            context.bot.send_message(chat_id=chat_id, text=Global.OK + " // Restricted mode enabled")
+        else:
+            context.bot.send_message(chat_id=chat_id, text=Global.OK + " // Restricted mode disabled")
+
+@serializer
+@chat_finder
 def gdpr(update, context, chat):
     # this code is a bit messed up
     if len(context.args) == 0:
@@ -212,8 +229,9 @@ def gdpr(update, context, chat):
             filename = ENVIRONMENT_MANAGER.download_chat(chat, update.message.chat_id)
             context.bot.send_document(chat_id=update.message.chat_id, document=open(filename, "rb"))
         elif command == "delete":
-            ENVIRONMENT_MANAGER.delete_chat(update.message.chat_id)
-            context.bot.send_message(chat_id=update.message.chat_id, text=Global.OK)
+            if (not chat.get_restricted_mode()) or context.bot.getChatMember(update.message.chat_id, update.message.from_user.id)["status"] in ["creator", "administrator"]:
+                ENVIRONMENT_MANAGER.delete_chat(update.message.chat_id)
+                context.bot.send_message(chat_id=update.message.chat_id, text=Global.OK)
         elif command == "flag":
             chat_id = update.message.chat_id
             user_id = update.message.from_user.id
@@ -344,6 +362,7 @@ def main():
     dp.add_handler(CommandHandler("thanos", thanos))
     dp.add_handler(CommandHandler("bof", bof))
     dp.add_handler(CommandHandler("bestoffioriktos", bof))
+    dp.add_handler(CommandHandler("restrict", restrict))
     dp.add_handler(CommandHandler("gdpr", gdpr))
 
     # on noncommand i.e. message
