@@ -1,4 +1,4 @@
-from os import environ
+﻿from os import environ
 
 SUPPORT_ME = "If you like my work, please make a donation on https://www.buymeacoffee.com/fiorixf2W - this is needed to keep me running!" + \
              "\nYou can contribute through single donations or by subscribing to one of the following tiers:" + \
